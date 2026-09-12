@@ -1,234 +1,245 @@
 # Invoice Manager
 
-A comprehensive Python Flask-based invoice management application with API support, webhooks, and PDF generation.
+Free, self-hosted invoicing and light accounting. Sales and purchases,
+financial reports, card and Direct Debit payments, a REST API and a customer
+portal. Your data stays on your server.
 
-## Features
+**[Live demo](https://pythoninvoice-demo-production.up.railway.app)** — sign in
+with `demo` / `demo`. Resets nightly.
 
-### Phase 1 (Implemented)
+MIT licensed. No per-user fees, no account required.
 
-- **Customer Management**
-  - Add, edit, delete customers
-  - Custom tax rates and currencies per customer
-  - Address and contact information
+---
 
-- **Products & Services**
-  - Create reusable products/services
-  - Set default pricing and descriptions
-  - Quick add to invoices
+## What's in it
 
-- **Invoice Management**
-  - Create invoices with multiple line items
-  - Add items from products or manually
-  - Set tax rate and currency per invoice
-  - Customer-specific defaults
-  - PDF export and HTML print view
-  - Invoice statuses: draft, sent, paid, partial, overdue, cancelled
+**Sales** — invoices with PDF export, recurring invoices, multi-currency with
+live FX rates, partial payments, credit notes, CSV import/export.
 
-- **Payment Tracking**
-  - Record payments manually
-  - Mark invoices as paid
-  - Payment history per invoice
-  - Partial payment support
+**Purchases** — suppliers, bills, expenses with receipts and approval, chart of
+accounts.
 
-- **API Access**
-  - Full REST API for all entities
-  - GET, POST, PUT, DELETE operations
-  - API key authentication with permissions
-  - Multiple API keys per user
+**Reports** — profit & loss, balance sheet, VAT return with submission
+checklist, tax summary, aged receivables and payables.
 
-- **Outbound Webhooks**
-  - Configure webhooks for events
-  - Events: invoice.created, invoice.paid, payment.received, etc.
-  - Authentication options: Bearer, API Key, Basic, Custom Header
-  - Test webhooks functionality
+**Getting paid** — Stripe (cards, checkout links), GoCardless (Direct Debit),
+SumUp, Wise. Incoming webhooks record payments automatically.
 
-- **Global Settings**
-  - Company name and address
-  - Logo upload
-  - Default tax rate and currency
-  - Invoice number prefix
-  - Payment terms and bank details
+**Integrations** — full REST API with scoped keys, outgoing webhooks, SMTP or
+Microsoft 365 email, customer portal.
 
-## Installation
+**Team** — six roles (Owner, Administrator, Accountant, Bookkeeper, Sales,
+Viewer), TOTP 2FA with backup codes.
 
-1. **Clone or extract the application:**
-   ```bash
-   cd invoice_app
-   ```
+### Not built yet
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+Quotes/estimates, purchase orders, full bank reconciliation (Wise transaction
+matching only), customisable PDF templates (one layout, your logo and details).
 
-3. **Run the application:**
-   ```bash
-   python run.py
-   ```
+---
 
-4. **Open in browser:**
-   ```
-   http://localhost:5000
-   ```
+## Requirements
 
-5. **Register a new account** and start creating invoices!
+- **MySQL 8.0 or MariaDB 10.6+** — SQLite is not supported; `database.py` is
+  MySQL-only
+- **Python 3.12+** if running without Docker
+- Docker and Docker Compose for the quickest path
 
-## API Documentation
+---
 
-### Authentication
+## Install with Docker (recommended)
 
-Include your API key in requests:
-```
-Header: X-API-Key: inv_your_api_key_here
-```
-Or as query parameter:
-```
-?api_key=inv_your_api_key_here
-```
+Two commands from a clean checkout.
 
-### Endpoints
-
-#### Customers
-- `GET /api/v1/customers` - List all customers
-- `POST /api/v1/customers` - Create customer
-- `GET /api/v1/customers/{id}` - Get customer
-- `PUT /api/v1/customers/{id}` - Update customer
-- `DELETE /api/v1/customers/{id}` - Delete customer
-
-#### Products
-- `GET /api/v1/products` - List all products
-- `POST /api/v1/products` - Create product
-- `GET /api/v1/products/{id}` - Get product
-- `PUT /api/v1/products/{id}` - Update product
-- `DELETE /api/v1/products/{id}` - Deactivate product
-
-#### Invoices
-- `GET /api/v1/invoices` - List all invoices
-- `POST /api/v1/invoices` - Create invoice
-- `GET /api/v1/invoices/{id}` - Get invoice with items
-- `PUT /api/v1/invoices/{id}` - Update invoice
-- `DELETE /api/v1/invoices/{id}` - Delete invoice
-
-#### Payments
-- `POST /api/v1/invoices/{id}/payments` - Add payment
-- `POST /api/v1/invoices/{id}/mark-paid` - Mark as fully paid
-
-#### External Payment Webhook
-- `POST /api/webhook/payment` - Receive external payment notifications
-
-### Example: Create Invoice via API
+### 1. Clone and configure
 
 ```bash
-curl -X POST "http://localhost:5000/api/v1/invoices" \
-  -H "X-API-Key: inv_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": 1,
-    "currency": "GBP",
-    "tax_rate": 20,
-    "items": [
-      {"description": "Consulting Services", "quantity": 10, "unit_price": 100},
-      {"description": "Software License", "quantity": 1, "unit_price": 500}
-    ],
-    "notes": "Thank you for your business!"
-  }'
+git clone https://github.com/tegwin/Pythoninvoice.git
+cd Pythoninvoice
+cp .env.example .env
 ```
 
-### Example: Record Payment via API
+Open `.env` and set real values:
 
 ```bash
-curl -X POST "http://localhost:5000/api/v1/invoices/1/payments" \
-  -H "X-API-Key: inv_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 1500.00,
-    "payment_method": "Bank Transfer",
-    "reference": "TXN-12345"
-  }'
+MYSQL_ROOT_PASSWORD=pick-something-long
+MYSQL_DATABASE=invoice_manager
+MYSQL_USER=invoice
+MYSQL_PASSWORD=pick-something-else-long
+SECRET_KEY=
+APP_PORT=5001
 ```
 
-## Webhook Events
+Generate `SECRET_KEY`:
 
-Configure outbound webhooks to receive notifications:
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
 
-- `invoice.created` - New invoice created
-- `invoice.updated` - Invoice modified
-- `invoice.sent` - Invoice marked as sent
-- `invoice.paid` - Invoice fully paid
-- `invoice.partially_paid` - Partial payment received
-- `invoice.deleted` - Invoice deleted
-- `customer.created` - New customer added
-- `customer.updated` - Customer modified
-- `customer.deleted` - Customer removed
-- `product.created` - New product added
-- `product.updated` - Product modified
-- `product.deleted` - Product deactivated
-- `payment.received` - Payment recorded
+`SECRET_KEY` signs session cookies. If it changes, everyone is logged out, so
+set it once and keep it.
 
-### Webhook Payload Format
+### 2. Start
+
+```bash
+docker compose up -d --build
+```
+
+First run pulls MySQL and builds the image — a couple of minutes. The app waits
+for the database, applies `schema.sql` (all 51 tables), then starts gunicorn.
+
+### 3. Open it
+
+```
+http://localhost:5001
+```
+
+Register — **the first account created becomes the Owner.**
+
+> Port 5001, not 5000: on macOS, port 5000 is taken by AirPlay Receiver.
+> Change `APP_PORT` in `.env` to move it.
+
+### Everyday commands
+
+```bash
+docker compose logs -f app      # follow logs
+docker compose restart app      # restart
+docker compose down             # stop
+docker compose down -v          # stop AND delete all data
+```
+
+---
+
+## Install without Docker
+
+### 1. Database
+
+```bash
+sudo mysql -e "CREATE DATABASE invoice_manager CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER 'invoice'@'localhost' IDENTIFIED BY 'your-password'; GRANT ALL ON invoice_manager.* TO 'invoice'@'localhost'; FLUSH PRIVILEGES;"
+```
+
+### 2. Load the schema
+
+```bash
+mysql -uinvoice -p invoice_manager < schema.sql
+```
+
+`schema.sql` is the complete database — 51 tables, no data. Every statement is
+`CREATE TABLE IF NOT EXISTS`, so it is safe to re-run.
+
+### 3. Python environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+A virtualenv is required on macOS — Homebrew Python refuses a plain
+`pip install` (PEP 668).
+
+### 4. Point it at the database
+
+Create `data/db_config.json`:
 
 ```json
 {
-  "event": "invoice.paid",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "webhook_id": "abc123def",
-  "data": {
-    "id": 1,
-    "invoice_number": "INV-01001",
-    "customer_name": "Acme Corp",
-    "total": 1500.00,
-    "status": "paid",
-    ...
-  }
+  "type": "mysql",
+  "mysql_host": "127.0.0.1",
+  "mysql_port": 3306,
+  "mysql_user": "invoice",
+  "mysql_password": "your-password",
+  "mysql_database": "invoice_manager",
+  "mysql_ssl": false
 }
 ```
 
-### Webhook Headers
+This file holds a live password. It is gitignored — keep it that way, and
+`chmod 600` it on a server.
 
-- `Content-Type: application/json`
-- `X-Webhook-Event: invoice.paid`
-- `X-Webhook-Signature: sha256_hash`
-- `User-Agent: InvoiceManager-Webhook/1.0`
+### 5. Run
 
-## Supported Currencies
-
-- GBP (£) - British Pound
-- USD ($) - US Dollar
-- EUR (€) - Euro
-- ZAR (R) - South African Rand
-- CAD (C$) - Canadian Dollar
-- AUD (A$) - Australian Dollar
-- NZD (NZ$) - New Zealand Dollar
-- CHF - Swiss Franc
-- JPY (¥) - Japanese Yen
-- INR (₹) - Indian Rupee
-
-## File Structure
-
-```
-invoice_app/
-├── app_core.py          # Database models and business logic
-├── app_web.py           # Flask routes and web interface
-├── api_webhooks.py      # API authentication and webhooks
-├── pdf_generator.py     # PDF invoice generation
-├── run.py               # Application entry point
-├── requirements.txt     # Python dependencies
-├── data/                # Database and uploaded files
-│   ├── invoices.db      # SQLite database
-│   └── invoices/        # Generated invoice files
-├── static/
-│   └── uploads/         # Uploaded logos
-└── templates/           # HTML templates
+```bash
+PORT=5001 python run.py
 ```
 
-## Styling
+`run.py` starts Flask's development server. Fine locally, **not** for a server —
+use gunicorn behind nginx. Full production setup with systemd, nginx and
+Let's Encrypt is in **[INSTALL.md](INSTALL.md)**.
 
-This application uses the same dark theme styling as the Pokemon Card Collection Manager, featuring:
-- Dark purple/blue color scheme
-- Accent colors: Red (#e94560), Yellow (#f0a500), Blue (#3b82f6), Green (#10b981)
-- Space Grotesk and Outfit fonts
-- Card-based UI with smooth transitions
+---
 
-## License
+## Deploying to a server
 
-MIT License - Feel free to use and modify for your needs.
+**[INSTALL.md](INSTALL.md)** covers the full production path:
+
+- Ubuntu/Debian with systemd + gunicorn + nginx + certbot
+- Docker on a VPS
+- Backups and restores
+- A cron job for recurring invoice generation
+
+### Environment variables
+
+| Variable | Required | What it does |
+|---|---|---|
+| `MYSQL_URL` | one of these | Full connection URL, e.g. `mysql://user:pass@host:3306/db` |
+| `MYSQL_HOST` / `MYSQL_USER` / `MYSQL_PASSWORD` / `MYSQL_DATABASE` | one of these | Individual settings, if you'd rather not use a URL |
+| `SECRET_KEY` | yes | Signs session cookies. Must be stable |
+| `PORT` | no | Port to bind. Defaults to 5000 |
+| `DEMO_MODE` | no | `true` puts the app in read-only demo mode |
+| `FOOTER_OWNER` | no | Your company name in the login footer |
+
+A connection URL is easier on hosts like Railway, where matching five separate
+variable names is error-prone.
+
+### Recurring invoices
+
+Nothing generates them on a schedule by itself. Add a cron job:
+
+```cron
+5 2 * * * curl -s -X POST -H "X-API-Key: YOUR_KEY" http://127.0.0.1:5001/api/v1/recurring/generate > /dev/null
+```
+
+Create the API key under **Settings → API Keys** first.
+
+---
+
+## Running a public demo
+
+Set `DEMO_MODE=true`. The app then blocks anything that would reach a third
+party — payment providers, outgoing email, API keys, webhooks — and shows
+integration pages read-only so visitors can still see them.
+
+`reset_demo.py` wipes the demo and reseeds it with sample companies and
+invoices. Point a nightly cron at it. It refuses to run unless `DEMO_MODE` is
+set, and refuses again if the database contains any account other than the demo
+user, so it cannot be pointed at a real install by accident.
+
+---
+
+## Documentation
+
+| File | What's in it |
+|---|---|
+| [INSTALL.md](INSTALL.md) | Docker, local and Linux server installs, troubleshooting |
+| [FEATURES.md](FEATURES.md) | Verified feature list, and what isn't built |
+| [USER_GUIDE.md](USER_GUIDE.md) | Using the app day to day |
+| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | REST API reference |
+| `schema.sql` | Complete database schema |
+
+---
+
+## Security
+
+- Never commit `data/db_config.json` or `.env` — both are gitignored
+- Run `./scan_secrets.sh` before pushing; it checks for tracked config files,
+  live provider keys, literal secret defaults and hardcoded hosts
+- Use HTTPS in production — the app handles payment provider keys, SMTP
+  passwords and customer data
+- `DEBUG` defaults to `True` in `run.py`. Do not leave that on a server
+
+---
+
+## Licence
+
+MIT. Use it, change it, run it for your clients.
