@@ -12,16 +12,16 @@ bad=$(git ls-files | grep -E '(^|/)(\.env|db_config\.json)$|\.(db|sqlite3?)$')
 [ -n "$bad" ] && report "TRACKED CONFIG/DB FILES:" "$bad"
 
 # 2. Live provider keys and private keys.
-keys=$(git grep -nIE 'sk_live_[A-Za-z0-9]|pk_live_[A-Za-z0-9]|rk_live_|gh[pousr]_[A-Za-z0-9]{10}|AKIA[0-9A-Z]{12}|xox[baprs]-[0-9]|-----BEGIN [A-Z ]*PRIVATE KEY' -- . 2>/dev/null)
+keys=$(git grep -nIE 'sk_live_[A-Za-z0-9]|pk_live_[A-Za-z0-9]|rk_live_|gh[pousr]_[A-Za-z0-9]{10}|AKIA[0-9A-Z]{12}|xox[baprs]-[0-9]|-----BEGIN [A-Z ]*PRIVATE KEY' -- . ':!scan_secrets.sh' 2>/dev/null)
 [ -n "$keys" ] && report "LIVE KEYS / PRIVATE KEYS:" "$keys"
 
 # 3. Passwords assigned a literal default instead of read from the environment.
-pw=$(git grep -nIE "(password|passwd|secret|api_key|token)[A-Za-z_]*['\"]?[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}['\"]" -- '*.py' '*.sh' '*.yml' '*.yaml' '*.json' 2>/dev/null \
+pw=$(git grep -nIE "(password|passwd|secret|api_key|token)[A-Za-z_]*['\"]?[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}['\"]" -- '*.py' '*.sh' '*.yml' '*.yaml' '*.json' ':!scan_secrets.sh' 2>/dev/null \
   | grep -viE "request\.|\.get\(|os\.environ|getenv|config\[|kwargs|\\\$\{|\\\$\(|VARCHAR|TEXT |INSERT|SELECT|hash|form\[")
 [ -n "$pw" ] && report "HARDCODED SECRET DEFAULTS:" "$pw"
 
 # 4. Hardcoded internal/company hosts in code (docs and .example are fine).
-hosts=$(git grep -nIE 'https?://[A-Za-z0-9.-]*(sondela|halopsa|psaconsultant|autotask)[A-Za-z0-9.-]*' -- '*.py' '*.sh' '*.yml' '*.yaml' 2>/dev/null \
+hosts=$(git grep -nIE 'https?://[A-Za-z0-9.-]*(sondela|halopsa|psaconsultant|autotask)[A-Za-z0-9.-]*' -- '*.py' '*.sh' '*.yml' '*.yaml' ':!scan_secrets.sh' 2>/dev/null \
   | grep -viE 'os\.environ|getenv|\.example|#')
 [ -n "$hosts" ] && report "HARDCODED INTERNAL HOSTS (move to env):" "$hosts"
 
