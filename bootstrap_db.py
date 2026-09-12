@@ -35,8 +35,23 @@ def first_env(*names):
     return None
 
 
+# A pasted value often carries the variable name, quotes or a stray newline
+# with it. Pull the URL out of whatever surrounds it rather than failing.
+URL_RE = re.compile(r'(mysql|mariadb)://\S+')
+
+
+def clean_url(raw):
+    """Return just the connection URL from a value that may have extra text."""
+    m = URL_RE.search(raw.strip().strip('"\''))
+    return m.group(0).rstrip('",\'') if m else None
+
+
 def resolve_config():
-    url = first_env(*URL_VARS)
+    raw = first_env(*URL_VARS)
+    url = clean_url(raw) if raw else None
+    if raw and not url:
+        print(f"WARNING: ignoring a connection URL that contains no mysql:// "
+              f"address; falling back to individual variables.", file=sys.stderr)
     if url:
         u = urlparse(url)
         if not u.hostname:
