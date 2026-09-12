@@ -3,6 +3,16 @@
 # database, loads the schema, then starts the app.
 set -e
 
+# Railway's MySQL service exports MYSQLHOST/MYSQLPORT/... (no underscore).
+# Accept those as fallbacks so the same image runs under compose and Railway.
+DB_HOST="${MYSQL_HOST:-${MYSQLHOST:-db}}"
+DB_PORT="${MYSQL_PORT:-${MYSQLPORT:-3306}}"
+DB_USER="${MYSQL_USER:-${MYSQLUSER:-invoice}}"
+DB_PASS="${MYSQL_PASSWORD:-${MYSQLPASSWORD:-invoice}}"
+DB_NAME="${MYSQL_DATABASE:-${MYSQLDATABASE:-invoice_manager}}"
+
+export DB_HOST DB_PORT DB_USER DB_PASS DB_NAME
+
 CONFIG_DIR=/app/data
 CONFIG_FILE="$CONFIG_DIR/db_config.json"
 
@@ -13,31 +23,37 @@ mkdir -p "$CONFIG_DIR" /app/static/uploads
 cat > "$CONFIG_FILE" <<EOF
 {
   "type": "mysql",
-  "mysql_host": "${MYSQL_HOST:-db}",
-  "mysql_port": ${MYSQL_PORT:-3306},
-  "mysql_user": "${MYSQL_USER:-invoice}",
-  "mysql_password": "${MYSQL_PASSWORD:-invoice}",
-  "mysql_database": "${MYSQL_DATABASE:-invoice_manager}",
+  "mysql_host": "${DB_HOST}",
+  "mysql_port": ${DB_PORT},
+  "mysql_user": "${DB_USER}",
+  "mysql_password": "${DB_PASS}",
+  "mysql_database": "${DB_NAME}",
   "mysql_ssl": ${MYSQL_SSL:-false}
 }
 EOF
 
-echo "Waiting for MySQL at ${MYSQL_HOST:-db}:${MYSQL_PORT:-3306} ..."
+echo "Waiting for MySQL at ${DB_HOST}:${DB_PORT} ..."
 for i in $(seq 1 60); do
     if python -c "
-import sys, mysql.connector
+import os, sys, mysql.connector
 try:
     mysql.connector.connect(
-        host='${MYSQL_HOST:-db}', port=${MYSQL_PORT:-3306},
-        user='${MYSQL_USER:-invoice}', password='${MYSQL_PASSWORD:-invoice}',
-        database='${MYSQL_DATABASE:-invoice_manager}', connection_timeout=3).close()
-except Exception:
+        host=os.environ['DB_HOST'], port=int(os.environ['DB_PORT']),
+        user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
+        database=os.environ['DB_NAME'],
+        connection_timeout=3, use_pure=True).close()
+except Exception as e:
+    print(e, file=sys.stderr)
     sys.exit(1)
-" 2>/dev/null; then
+" 2>/tmp/dbwait.err; then
         echo "Database is up."
         break
     fi
-    [ "$i" = "60" ] && { echo "ERROR: database never became reachable."; exit 1; }
+    if [ "$i" = "60" ]; then
+        echo "ERROR: database never became reachable."
+        cat /tmp/dbwait.err
+        exit 1
+    fi
     sleep 2
 done
 
@@ -54,14 +70,15 @@ sql = re.sub(r'^\s*--.*$', '', sql, flags=re.M)
 statements = [s.strip() for s in sql.split(';') if s.strip()]
 
 conn = mysql.connector.connect(
-    host=os.environ.get('MYSQL_HOST', 'db'),
-    port=int(os.environ.get('MYSQL_PORT', 3306)),
-    user=os.environ.get('MYSQL_USER', 'invoice'),
-    password=os.environ.get('MYSQL_PASSWORD', 'invoice'),
-    database=os.environ.get('MYSQL_DATABASE', 'invoice_manager'),
+    host=os.environ['DB_HOST'], port=int(os.environ['DB_PORT']),
+    user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
+    database=os.environ['DB_NAME'], use_pure=True,
 )
 cur = conn.cursor()
 for stmt in statements:
+    # Never let the file switch database - the configured name may differ.
+    if re.match(r'^(CREATE\s+DATABASE|USE)\b', stmt, re.IGNORECASE):
+        continue
     try:
         cur.execute(stmt)
     except mysql.connector.Error as e:

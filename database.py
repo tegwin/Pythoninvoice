@@ -81,7 +81,10 @@ def get_mysql_pool():
             'database': config['mysql_database'],
             'autocommit': False,
             'charset': 'utf8mb4',
-            'collation': 'utf8mb4_unicode_ci'
+            'collation': 'utf8mb4_unicode_ci',
+            # The bundled C extension has no IPv6 support, which is all
+            # Railway's private network offers. Pure Python handles both.
+            'use_pure': True,
         }
         
         if config.get('mysql_ssl'):
@@ -225,7 +228,8 @@ def test_mysql_connection(host: str, port: int, user: str, password: str, databa
             user=user,
             password=password,
             database=database,
-            connection_timeout=5
+            connection_timeout=5,
+            use_pure=True,
         )
         conn.close()
         return {'success': True}

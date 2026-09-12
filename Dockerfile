@@ -28,8 +28,8 @@ ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # 2 workers with 4 threads each suits a small install. The app keeps a MySQL
 # pool of 5 per process, so raise pool_size in database.py before adding workers.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", \
-     "--workers", "2", "--threads", "4", \
-     "--timeout", "120", \
-     "--access-logfile", "-", "--error-logfile", "-", \
-     "app_web:app"]
+# Railway injects PORT; compose has no PORT so it falls back to 5000.
+# sh -c so $PORT expands at runtime rather than being a literal.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-5000} \
+     --workers 2 --threads 4 --timeout 120 \
+     --access-logfile - --error-logfile - app_web:app"]
