@@ -8,13 +8,18 @@ set -e
 DB_HOST="${MYSQL_HOST:-${MYSQLHOST:-db}}"
 DB_PORT="${MYSQL_PORT:-${MYSQLPORT:-3306}}"
 DB_USER="${MYSQL_USER:-${MYSQLUSER:-invoice}}"
-DB_PASS="${MYSQL_PASSWORD:-${MYSQLPASSWORD:-invoice}}"
+DB_PASS="${MYSQL_PASSWORD:-${MYSQLPASSWORD:-}}"
 DB_NAME="${MYSQL_DATABASE:-${MYSQLDATABASE:-invoice_manager}}"
 
 export DB_HOST DB_PORT DB_USER DB_PASS DB_NAME
 
 CONFIG_DIR=/app/data
 CONFIG_FILE="$CONFIG_DIR/db_config.json"
+
+if [ -z "$DB_PASS" ]; then
+    echo "ERROR: set MYSQL_PASSWORD (or MYSQLPASSWORD). No default is provided."
+    exit 1
+fi
 
 mkdir -p "$CONFIG_DIR" /app/static/uploads
 

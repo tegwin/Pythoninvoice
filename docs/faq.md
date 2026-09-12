@@ -78,7 +78,7 @@ Can't find what you're looking for?
 
 - 📧 **Email**: [helpdesk@sondelaconsulting.com](mailto:helpdesk@sondelaconsulting.com)
 - 🌐 **Website**: [sondelaconsulting.com](https://sondelaconsulting.com)
-- 🗺️ **Feature Requests**: [Submit a feature request](https://roadmap.sondelaconsulting.com/request) password"
+- 🗺️ **Feature Requests**: [Submit a feature request](https://roadmap.sondelaconsulting.com/request)
     If you're the only user, you'll need to reset the database or contact support. For team members, an admin can reset your password.
 
 ## Still Need Help?

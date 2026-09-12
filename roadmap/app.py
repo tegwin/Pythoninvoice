@@ -23,18 +23,22 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 DB_PATH = os.path.join(DATA_DIR, 'roadmap.db')
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# App Configuration - Customize these for your product
+# App Configuration - set these per deployment. No company details are baked
+# in: this app gets handed to other MSPs, and secret scanners flag a company
+# domain sitting next to the word "password".
 APP_CONFIG = {
-    'app_name': 'Invoice Manager',
-    'company_name': 'Sondela Consulting Ltd.',
-    'version': '1.0.0',
-    'support_email': 'helpdesk@sondelaconsulting.com',
-    'website': 'https://sondelaconsulting.com',
-    'docs_url': 'https://docs.sondelaconsulting.com',
+    'app_name': os.environ.get('ROADMAP_APP_NAME', 'Invoice Manager'),
+    'company_name': os.environ.get('ROADMAP_COMPANY_NAME', ''),
+    'version': os.environ.get('ROADMAP_VERSION', '1.0.0'),
+    'support_email': os.environ.get('ROADMAP_SUPPORT_EMAIL', ''),
+    'website': os.environ.get('ROADMAP_WEBSITE', ''),
+    'docs_url': os.environ.get('ROADMAP_DOCS_URL', ''),
 }
 
 # Admin password - CHANGE THIS!
-ADMIN_PASSWORD = os.environ.get('ROADMAP_ADMIN_PASSWORD', 'change_me_in_production')
+# No default: a baked-in password is one nobody changes. Unset means the
+# admin panel simply cannot be logged into.
+ADMIN_PASSWORD = os.environ.get('ROADMAP_ADMIN_PASSWORD')
 
 
 # =============================================================================
@@ -242,7 +246,9 @@ def admin_login():
     if request.method == 'POST':
         password = request.form.get('password')
         
-        if password == ADMIN_PASSWORD:
+        if not ADMIN_PASSWORD:
+            flash('Admin access is disabled: ROADMAP_ADMIN_PASSWORD is not set.', 'error')
+        elif password == ADMIN_PASSWORD:
             session['is_admin'] = True
             flash('Welcome! You are now logged in as admin.', 'success')
             return redirect(url_for('admin_dashboard'))
