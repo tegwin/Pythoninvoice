@@ -211,6 +211,25 @@ def seed(cur):
     return invoice_no - 1001
 
 
+def looks_like_live(cur):
+    """Return the name of a non-demo account, if the database has one.
+
+    DEMO_MODE only proves which *service* this is, not which *database* it is
+    pointed at - a mistyped MYSQL_URL on the cron service would otherwise wipe
+    live. A demo database only ever contains the demo account, so any other
+    user means we are somewhere we should not be.
+    """
+    try:
+        cur.execute("SELECT username FROM users WHERE username <> %s LIMIT 1",
+                    (DEMO_USERNAME,))
+        row = cur.fetchone()
+    except mysql.connector.Error:
+        return None          # no users table yet - a fresh database, fine
+    if not row:
+        return None
+    return row['username'] if isinstance(row, dict) else row[0]
+
+
 def main():
     if os.environ.get('DEMO_MODE', '').lower() not in ('1', 'true', 'yes'):
         sys.exit("Refusing to run: DEMO_MODE is not set. This wipes every table.")
@@ -218,7 +237,18 @@ def main():
     cfg = resolve_config()
     print(f"Resetting demo data in {cfg['mysql_host']}/{cfg['mysql_database']}")
     conn = connect(cfg, timeout=30)
-    cur = conn.cursor()
+    cur = conn.cursor(dictionary=True)
+
+    intruder = looks_like_live(cur)
+    if intruder and os.environ.get('DEMO_RESET_FORCE', '').lower() not in ('1', 'true', 'yes'):
+        sys.exit(
+            f"Refusing to run: this database contains the account '{intruder}', "
+            f"which is not the demo account '{DEMO_USERNAME}'.\n"
+            f"  This looks like a real install, not the demo. Check MYSQL_URL on "
+            f"this service.\n"
+            f"  Set DEMO_RESET_FORCE=true only if you are certain."
+        )
+
     wipe(cur)
     count = seed(cur)
     conn.commit()
