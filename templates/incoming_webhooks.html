@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Incoming Webhooks - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 Incoming Webhooks</h1>
+    <p class="page-subtitle">Receive payment notifications from external services</p>
+</div>
+
+<div class="panel mb-4">
+    <div class="flex gap-2 justify-between" style="flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" onclick="showCreateModal()">➕ Create Webhook Endpoint</button>
+        <a href="{{ url_for('webhooks') }}" class="btn btn-secondary">📤 Outgoing Webhooks</a>
+    </div>
+</div>
+
+{% if webhooks %}
+<div class="panel mb-4">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Provider</th>
+                <th>Endpoint URL</th>
+                <th>Received</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for webhook in webhooks %}
+            <tr style="{% if not webhook.active %}opacity: 0.5;{% endif %}">
+                <td>
+                    <strong>{{ webhook.name }}</strong>
+                    {% if webhook.description %}
+                    <div class="text-muted" style="font-size: 0.85rem;">{{ webhook.description }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-sent">{{ providers[webhook.provider].name if webhook.provider in providers else webhook.provider }}</span>
+                </td>
+                <td>
+                    <code style="font-size: 0.8rem; word-break: break-all;">{{ request.host_url }}webhook/incoming/{{ webhook.endpoint_key }}</code>
+                    <button class="btn btn-secondary btn-sm" style="margin-left: 0.5rem; padding: 0.2rem 0.5rem;" 
+                            onclick="copyToClipboard('{{ request.host_url }}webhook/incoming/{{ webhook.endpoint_key }}')" title="Copy URL">📋</button>
+                </td>
+                <td>
+                    <strong>{{ webhook.receive_count or 0 }}</strong>
+                    {% if webhook.last_received_at %}
+                    <div class="text-muted" style="font-size: 0.8rem;">Last: {{ webhook.last_received_at.strftime('%Y-%m-%d %H:%M') if webhook.last_received_at else 'Never' }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if webhook.active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">Disabled</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <a href="{{ url_for('view_incoming_webhook', webhook_id=webhook.id) }}" class="btn btn-secondary btn-sm">View</a>
+                        <form method="POST" action="{{ url_for('toggle_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                {% if webhook.active %}⏸️{% else %}▶️{% endif %}
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('delete_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this webhook endpoint?');">🗑️</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">📥</div>
+    <h3>No Incoming Webhooks</h3>
+    <p class="text-muted" style="margin-bottom: 1.5rem;">Create webhook endpoints to receive payment notifications from Stripe, PayPal, and other services.</p>
+    <button type="button" class="btn btn-primary" onclick="showCreateModal()">➕ Create Webhook Endpoint</button>
+</div>
+{% endif %}
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">📋 How It Works</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">1️⃣</div>
+            <strong>Create Endpoint</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Get a unique URL for each payment provider</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">2️⃣</div>
+            <strong>Configure Provider</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Add the URL to Stripe, PayPal, etc.</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">3️⃣</div>
+            <strong>Receive Payments</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Invoices are automatically updated</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">4️⃣</div>
+            <strong>Track Everything</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">View logs and troubleshoot issues</p>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div id="create-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem; overflow-y: auto;">
+    <div style="max-width: 500px; margin: 2rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
+        <h3 style="margin-top: 0;">Create Webhook Endpoint</h3>
+        <form method="POST" action="{{ url_for('create_incoming_webhook') }}">
+            <div class="form-group">
+                <label class="form-label" for="name">Name *</label>
+                <input type="text" id="name" name="name" class="form-control" required placeholder="e.g., Stripe Payments">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="provider">Provider</label>
+                <select id="provider" name="provider" class="form-control">
+                    {% for key, info in providers.items() %}
+                    <option value="{{ key }}">{{ info.name }} - {{ info.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <input type="text" id="description" name="description" class="form-control" placeholder="Optional description">
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary">Create Endpoint</button>
+                <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showCreateModal() {
+    document.getElementById('create-modal').style.display = 'block';
+}
+
+function hideModal() {
+    document.getElementById('create-modal').style.display = 'none';
+}
+
+document.getElementById('create-modal').addEventListener('click', function(e) {
+    if (e.target === this) hideModal();
+});
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('URL copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

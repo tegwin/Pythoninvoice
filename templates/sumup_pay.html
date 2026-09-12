@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay Invoice {{ invoice.invoice_number }} - {{ g.brand_name or 'Invoice Manager' }}</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-medium: #1a1a24;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-green: #00d4aa;
+            --accent-yellow: #ffd700;
+            --accent-red: #ff4757;
+            --border: #2a2a3a;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .payment-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .brand-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-yellow);
+        }
+        
+        .invoice-info {
+            background: var(--bg-medium);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .invoice-number {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        
+        .customer-name {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        #sumup-card {
+            min-height: 300px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-yellow);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .result {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .result-success { color: var(--accent-green); }
+        .result-error { color: var(--accent-red); }
+        
+        .result h2 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .result p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent-yellow);
+            color: #000;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .secure-note {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .secure-note span {
+            color: var(--accent-green);
+        }
+        
+        .powered-by {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <div class="header">
+            <div class="logo">💳</div>
+            <div class="brand-name">{{ g.brand_name or 'Invoice Manager' }}</div>
+        </div>
+        
+        <div class="invoice-info">
+            <div class="invoice-number">Invoice {{ invoice.invoice_number }}</div>
+            <div class="amount">{{ currency_symbol }}{{ "%.2f"|format(amount_due) }}</div>
+            {% if invoice.customer_name %}
+            <div class="customer-name">{{ invoice.customer_name }}</div>
+            {% endif %}
+        </div>
+        
+        <div id="payment-status">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading secure payment form...</p>
+            </div>
+            
+            <div id="sumup-card"></div>
+            
+            <div id="result-success" class="result" style="display: none;">
+                <div class="result-icon result-success">✓</div>
+                <h2>Payment Successful!</h2>
+                <p>Thank you for your payment. A confirmation has been sent.</p>
+                <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn">View Invoice</a>
+            </div>
+            
+            <div id="result-error" class="result" style="display: none;">
+                <div class="result-icon result-error">✗</div>
+                <h2>Payment Failed</h2>
+                <p id="error-message">There was an issue processing your payment.</p>
+                <button onclick="location.reload()" class="btn">Try Again</button>
+            </div>
+        </div>
+        
+        <div class="secure-note">
+            <span>🔒</span> Secure payment powered by SumUp
+        </div>
+        
+        <div class="powered-by">
+            Powered by {{ g.brand_name or 'Invoice Manager' }}
+        </div>
+    </div>
+    
+    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
+    <script>
+        const checkoutId = "{{ checkout_id }}";
+        const verifyUrl = "{{ url_for('sumup_verify_payment', checkout_id=checkout_id) }}";
+        const invoiceUrl = "{{ url_for('view_invoice', invoice_id=invoice.id) }}";
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading, show card widget
+            document.getElementById('loading').style.display = 'none';
+            
+            SumUpCard.mount({
+                id: 'sumup-card',
+                checkoutId: checkoutId,
+                showFooter: true,
+                showSubmitButton: true,
+                locale: 'en-GB',
+                onResponse: function(type, body) {
+                    console.log('SumUp response:', type, body);
+                    
+                    switch(type) {
+                        case 'success':
+                            // Payment successful - verify with our server
+                            verifyPayment();
+                            break;
+                            
+                        case 'error':
+                            showError(body.message || 'Payment failed. Please try again.');
+                            break;
+                            
+                        case 'sent':
+                            // Payment is being processed
+                            console.log('Payment sent for processing');
+                            break;
+                            
+                        case 'invalid':
+                            // Invalid card details
+                            console.log('Invalid card details');
+                            break;
+                            
+                        case 'auth-screen':
+                            // 3DS authentication screen shown
+                            console.log('3DS authentication in progress');
+                            break;
+                    }
+                }
+            });
+        });
+        
+        function verifyPayment() {
+            // Hide the card widget
+            document.getElementById('sumup-card').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').innerHTML = '<div class="spinner"></div><p>Verifying payment...</p>';
+            
+            // Call our server to verify and record the payment
+            fetch(verifyUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                
+                if (data.success) {
+                    document.getElementById('result-success').style.display = 'block';
+                } else {
+                    showError(data.message || 'Payment verification failed.');
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                showError('Error verifying payment. Please contact support.');
+                console.error('Verification error:', error);
+            });
+        }
+        
+        function showError(message) {
+            document.getElementById('sumup-card').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('result-error').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

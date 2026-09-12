@@ -1,0 +1,108 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Invoices - Customer Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📄 Your Invoices</h1>
+    <p class="page-subtitle">View and pay your invoices from {{ business_info.company_name }}</p>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs">
+    <a href="{{ url_for('portal.portal_invoices') }}" class="filter-tab {% if not filter %}active{% endif %}">All ({{ total_count }})</a>
+    <a href="{{ url_for('portal.portal_invoices', filter='unpaid') }}" class="filter-tab {% if filter == 'unpaid' %}active{% endif %}">Unpaid ({{ unpaid_count }})</a>
+    <a href="{{ url_for('portal.portal_invoices', filter='overdue') }}" class="filter-tab {% if filter == 'overdue' %}active{% endif %}">Overdue ({{ overdue_count }})</a>
+    <a href="{{ url_for('portal.portal_invoices', filter='paid') }}" class="filter-tab {% if filter == 'paid' %}active{% endif %}">Paid ({{ paid_count }})</a>
+</div>
+
+<!-- Summary -->
+{% if filter == 'unpaid' or filter == 'overdue' %}
+<div class="panel" style="background: linear-gradient(135deg, var(--bg-secondary), rgba(234, 179, 8, 0.1)); border-color: var(--accent-yellow);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="color: var(--text-secondary); font-size: 0.9rem;">Total Outstanding</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-yellow);">{{ currency_symbol }}{{ "%.2f"|format(total_outstanding) }}</div>
+        </div>
+        {% if invoices %}
+        <a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoices[0].id) }}" class="btn btn-success">💳 Pay Now</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Invoices Table -->
+<div class="panel">
+    {% if invoices %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Due Date</th>
+                    <th>Total</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoice.id) }}" style="color: var(--accent-blue); text-decoration: none; font-weight: 500;">
+                            {{ invoice.invoice_number }}
+                        </a>
+                    </td>
+                    <td>{{ invoice.issue_date.strftime('%d %b %Y') if invoice.issue_date else '' }}</td>
+                    <td>
+                        {% if invoice.due_date %}
+                            {% set is_overdue = invoice.status not in ['paid', 'cancelled'] and invoice.due_date < now.date() %}
+                            <span style="{% if is_overdue %}color: var(--accent-red); font-weight: 500;{% endif %}">
+                                {{ invoice.due_date.strftime('%d %b %Y') if invoice.due_date else '' }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>{{ currency_symbol }}{{ "%.2f"|format(invoice.total) }}</td>
+                    <td>{{ currency_symbol }}{{ "%.2f"|format(invoice.amount_paid) }}</td>
+                    <td>
+                        {% set balance = invoice.total - invoice.amount_paid %}
+                        <strong {% if balance > 0 %}style="color: var(--accent-yellow);"{% endif %}>
+                            {{ currency_symbol }}{{ "%.2f"|format(balance) }}
+                        </strong>
+                    </td>
+                    <td>
+                        {% if invoice.status == 'paid' %}
+                            <span class="badge badge-paid">Paid</span>
+                        {% elif invoice.status == 'partial' %}
+                            <span class="badge badge-partial">Partial</span>
+                        {% elif invoice.due_date and invoice.due_date < now.date() %}
+                            <span class="badge badge-overdue">Overdue</span>
+                        {% elif invoice.status == 'cancelled' %}
+                            <span class="badge" style="background: rgba(100,100,100,0.2); color: #888;">Cancelled</span>
+                        {% else %}
+                            <span class="badge badge-unpaid">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if invoice.status not in ['paid', 'cancelled'] %}
+                            <a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoice.id) }}" class="btn btn-success btn-sm">Pay</a>
+                        {% else %}
+                            <a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoice.id) }}" class="btn btn-secondary btn-sm">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+        <p>No invoices found{% if filter %} with this filter{% endif %}.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

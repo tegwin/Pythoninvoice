@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}{% if invoice %}Edit Invoice{% else %}New Invoice{% endif %} - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if invoice %}✏️ Edit Invoice {{ invoice.invoice_number }}{% else %}➕ New Invoice{% endif %}</h1>
+    <p class="page-subtitle">{% if invoice %}Update invoice details{% else %}Create a new invoice{% endif %}</p>
+</div>
+
+<form method="POST" id="invoice-form">
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Invoice Details</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="customer_id">Customer</label>
+                <select id="customer_id" name="customer_id" class="form-control" onchange="updateCustomerDefaults()">
+                    <option value="">-- Select Customer --</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" 
+                            data-tax="{{ customer.custom_tax_rate|default('', true)|float|int if customer.custom_tax_rate is not none else '' }}"
+                            data-currency="{{ customer.custom_currency or '' }}"
+                            {% if invoice and invoice.customer_id == customer.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            {% if invoice %}
+            <div class="form-group">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-control">
+                    <option value="draft" {% if invoice.status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="sent" {% if invoice.status == 'sent' %}selected{% endif %}>Sent</option>
+                    <option value="paid" {% if invoice.status == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="partial" {% if invoice.status == 'partial' %}selected{% endif %}>Partial</option>
+                    <option value="overdue" {% if invoice.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="cancelled" {% if invoice.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="issue_date">Issue Date</label>
+                <input type="date" id="issue_date" name="issue_date" class="form-control" 
+                       value="{{ invoice.issue_date if invoice else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="due_date">Due Date</label>
+                <input type="date" id="due_date" name="due_date" class="form-control"
+                       value="{{ invoice.due_date if invoice else '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="currency">Currency</label>
+                <select id="currency" name="currency" class="form-control" onchange="checkInvoiceExchangeRate()">
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}" {% if (invoice and invoice.currency == code) or (not invoice and settings.default_currency == code) %}selected{% endif %}>
+                        {{ info.symbol }} {{ code }} - {{ info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" id="invoice_exchange_rate_group" style="display: none;">
+                <label class="form-label" for="exchange_rate">Exchange Rate (to {{ settings.default_currency or 'GBP' }})</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="number" id="exchange_rate" name="exchange_rate" class="form-control"
+                           value="{{ invoice.exchange_rate if invoice and invoice.exchange_rate else 1 }}"
+                           step="0.000001" min="0.000001" style="flex: 1;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchInvoiceExchangeRate()" title="Get current rate">🔄</button>
+                </div>
+                <small class="text-muted">1 <span id="invoice_currency_label">USD</span> = <span id="invoice_rate_display">1</span> {{ settings.default_currency or 'GBP' }}</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="tax_rate">Tax Rate</label>
+                <select id="tax_rate" name="tax_rate" class="form-control">
+                    {% set tax_rates = (g.tax_rates or '0,5,10,15,20,25').split(',') %}
+                    {% set current_rate = (invoice.tax_rate if invoice else settings.default_tax_rate)|default(0)|float|int %}
+                    {% for rate in tax_rates %}
+                    {% set rate_val = rate|trim|int %}
+                    <option value="{{ rate|trim }}" {% if current_rate == rate_val %}selected{% endif %}>
+                        {% if rate|trim == '0' %}No VAT (0%){% else %}{{ rate|trim }}% VAT{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <input type="hidden" id="base_currency" name="base_currency" value="{{ settings.default_currency or 'GBP' }}">
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Line Items</h3>
+        {% if coa_mandatory %}
+        <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.9rem;">
+            ⚠️ Chart of Account is required for all line items
+        </p>
+        {% endif %}
+        
+        <div class="table-container">
+        <table class="items-table" id="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Description</th>
+                    <th style="width: 14%;">Product</th>
+                    <th style="width: 14%;">Account</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 12%;">Unit Price</th>
+                    <th style="width: 12%;">Total</th>
+                    <th style="width: 8%;"></th>
+                </tr>
+            </thead>
+            <tbody id="items-body">
+                {% if invoice and invoice['items'] %}
+                    {% for item in invoice['items'] %}
+                    <tr class="item-row">
+                        <td><input type="text" name="item_description[]" value="{{ item.description }}" required></td>
+                        <td>
+                            <select name="item_product_id[]" onchange="fillFromProduct(this)">
+                                <option value="">Manual</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" 
+                                        data-price="{{ product.unit_price }}" 
+                                        data-desc="{{ product.name }}"
+                                        data-taxable="{{ product.taxable }}"
+                                        data-coa="{{ product.coa_id or '' }}"
+                                        {% if item.product_id == product.id %}selected{% endif %}>
+                                    {{ product.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select name="item_coa_id[]" {% if coa_mandatory %}required{% endif %}>
+                                <option value="">{% if coa_mandatory %}Select...{% else %}None{% endif %}</option>
+                                {% for account in coa_accounts %}
+                                <option value="{{ account.id }}" {% if item.coa_id == account.id %}selected{% endif %}>
+                                    {{ account.code }} - {{ account.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><input type="number" name="item_quantity[]" value="{{ item.quantity }}" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+                        <td><input type="number" name="item_price[]" value="{{ item.unit_price }}" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+                        <td class="line-total">{{ "%.2f"|format(item.line_total or 0) }}</td>
+                        <td><button type="button" class="remove-row" onclick="removeRow(this)">✕</button></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr class="item-row">
+                    <td><input type="text" name="item_description[]" placeholder="Item description" required></td>
+                    <td>
+                        <select name="item_product_id[]" onchange="fillFromProduct(this)">
+                            <option value="">Manual</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" 
+                                    data-price="{{ product.unit_price }}" 
+                                    data-desc="{{ product.name }}"
+                                    data-taxable="{{ product.taxable }}"
+                                    data-coa="{{ product.coa_id or '' }}">
+                                {{ product.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select name="item_coa_id[]" {% if coa_mandatory %}required{% endif %}>
+                            <option value="">{% if coa_mandatory %}Select...{% else %}None{% endif %}</option>
+                            {% for account in coa_accounts %}
+                            <option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><input type="number" name="item_quantity[]" value="1" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+                    <td><input type="number" name="item_price[]" value="0" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+                    <td class="line-total">0.00</td>
+                    <td><button type="button" class="remove-row" onclick="removeRow(this)">✕</button></td>
+                </tr>
+                {% endif %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addRow()">➕ Add Line</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4"></td>
+                    <td style="text-align: right; font-weight: bold;">Subtotal:</td>
+                    <td id="subtotal">0.00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="4"></td>
+                    <td style="text-align: right; font-weight: bold;">Tax (<span id="tax-rate-display">0</span>%):</td>
+                    <td id="tax-amount">0.00</td>
+                    <td></td>
+                </tr>
+                <tr style="background: var(--bg-medium);">
+                    <td colspan="4"></td>
+                    <td style="text-align: right; font-weight: bold; font-size: 1.1rem;">Total:</td>
+                    <td id="total" style="font-weight: bold; font-size: 1.1rem; color: var(--accent-green);">0.00</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Additional Information</h3>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control">{{ invoice.notes if invoice else '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="payment_terms">Payment Terms</label>
+            <textarea id="payment_terms" name="payment_terms" class="form-control">{{ invoice.payment_terms if invoice else settings.payment_terms or '' }}</textarea>
+        </div>
+    </div>
+    
+    <div class="flex gap-4">
+        <button type="submit" class="btn btn-primary">💾 {% if invoice %}Update{% else %}Create{% endif %} Invoice</button>
+        <a href="{{ url_for('invoices') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Default tax rate from settings
+const defaultTaxRate = {{ settings.default_tax_rate|default(0)|float|int }};
+
+function addRow() {
+    const tbody = document.getElementById('items-body');
+    const row = `
+        <tr class="item-row">
+            <td><input type="text" name="item_description[]" placeholder="Item description" required></td>
+            <td>
+                <select name="item_product_id[]" onchange="fillFromProduct(this)">
+                    <option value="">Manual</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" data-price="{{ product.unit_price }}" data-desc="{{ product.name }}" data-taxable="{{ product.taxable }}" data-coa="{{ product.coa_id or '' }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <select name="item_coa_id[]" {% if coa_mandatory %}required{% endif %}>
+                    <option value="">{% if coa_mandatory %}Select...{% else %}None{% endif %}</option>
+                    {% for account in coa_accounts %}
+                    <option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td><input type="number" name="item_quantity[]" value="1" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+            <td><input type="number" name="item_price[]" value="0" step="0.01" min="0" onchange="calculateLineTotal(this)"></td>
+            <td class="line-total">0.00</td>
+            <td><button type="button" class="remove-row" onclick="removeRow(this)">✕</button></td>
+        </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', row);
+}
+
+function removeRow(btn) {
+    const rows = document.querySelectorAll('.item-row');
+    if (rows.length > 1) {
+        btn.closest('tr').remove();
+        calculateTotals();
+    }
+}
+
+function fillFromProduct(select) {
+    const row = select.closest('tr');
+    const option = select.options[select.selectedIndex];
+    
+    if (option.value) {
+        row.querySelector('input[name="item_description[]"]').value = option.dataset.desc;
+        row.querySelector('input[name="item_price[]"]').value = option.dataset.price;
+        
+        // Set COA from product if available
+        const coaSelect = row.querySelector('select[name="item_coa_id[]"]');
+        if (coaSelect && option.dataset.coa && option.dataset.coa !== '') {
+            coaSelect.value = option.dataset.coa;
+            console.log('Setting COA to:', option.dataset.coa, 'Result:', coaSelect.value);
+        }
+        
+        // If product is taxable and current tax rate is 0, set to default tax rate
+        const isTaxable = option.dataset.taxable === '1';
+        const taxSelect = document.getElementById('tax_rate');
+        const currentTaxRate = parseFloat(taxSelect.value) || 0;
+        
+        if (isTaxable && currentTaxRate === 0 && defaultTaxRate > 0) {
+            taxSelect.value = defaultTaxRate;
+        }
+        
+        calculateLineTotal(select);
+    }
+}
+
+function calculateLineTotal(input) {
+    const row = input.closest('tr');
+    const qty = parseFloat(row.querySelector('input[name="item_quantity[]"]').value) || 0;
+    const price = parseFloat(row.querySelector('input[name="item_price[]"]').value) || 0;
+    row.querySelector('.line-total').textContent = (qty * price).toFixed(2);
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.line-total').forEach(cell => {
+        subtotal += parseFloat(cell.textContent) || 0;
+    });
+    
+    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    
+    document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('tax-rate-display').textContent = taxRate;
+    document.getElementById('tax-amount').textContent = taxAmount.toFixed(2);
+    document.getElementById('total').textContent = (subtotal + taxAmount).toFixed(2);
+}
+
+function updateCustomerDefaults() {
+    const select = document.getElementById('customer_id');
+    const option = select.options[select.selectedIndex];
+    
+    // Only update if customer is selected and has custom settings
+    if (option.value) {
+        // Update tax rate if customer has a custom tax rate set
+        if (option.dataset.tax !== '' && option.dataset.tax !== undefined) {
+            // Convert to integer to match select option values
+            const taxRate = parseInt(parseFloat(option.dataset.tax), 10);
+            document.getElementById('tax_rate').value = taxRate.toString();
+        }
+        // Update currency if customer has a custom currency set
+        if (option.dataset.currency !== '' && option.dataset.currency !== undefined) {
+            document.getElementById('currency').value = option.dataset.currency;
+            checkInvoiceExchangeRate();
+        }
+    }
+    calculateTotals();
+}
+
+// Exchange rate handling for invoices
+const invoiceBaseCurrency = '{{ settings.default_currency or "GBP" }}';
+
+function checkInvoiceExchangeRate() {
+    const currency = document.getElementById('currency').value;
+    const rateGroup = document.getElementById('invoice_exchange_rate_group');
+    const currencyLabel = document.getElementById('invoice_currency_label');
+    
+    if (currency !== invoiceBaseCurrency) {
+        rateGroup.style.display = 'block';
+        currencyLabel.textContent = currency;
+        // Auto-fetch rate if empty or 1
+        const currentRate = parseFloat(document.getElementById('exchange_rate').value) || 1;
+        if (currentRate === 1) {
+            fetchInvoiceExchangeRate();
+        }
+    } else {
+        rateGroup.style.display = 'none';
+        document.getElementById('exchange_rate').value = 1;
+    }
+}
+
+function fetchInvoiceExchangeRate() {
+    const currency = document.getElementById('currency').value;
+    if (currency === invoiceBaseCurrency) return;
+    
+    const rateDisplay = document.getElementById('invoice_rate_display');
+    rateDisplay.textContent = 'Loading...';
+    
+    fetch(`/api/exchange-rate?from=${currency}&to=${invoiceBaseCurrency}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.rate && data.rate !== 1) {
+                document.getElementById('exchange_rate').value = data.rate.toFixed(6);
+                rateDisplay.textContent = data.rate.toFixed(4);
+            } else if (data.message) {
+                rateDisplay.innerHTML = '<span style="color: var(--accent-yellow);">Enter rate manually (no API key)</span>';
+            } else {
+                rateDisplay.textContent = '1.0000';
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching rate:', err);
+            rateDisplay.innerHTML = '<span style="color: var(--accent-red);">Error - enter manually</span>';
+        });
+}
+
+document.getElementById('exchange_rate').addEventListener('input', function() {
+    document.getElementById('invoice_rate_display').textContent = parseFloat(this.value || 1).toFixed(4);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    const due = new Date(); due.setDate(due.getDate() + 30);
+    
+    if (!document.getElementById('issue_date').value) document.getElementById('issue_date').value = today;
+    if (!document.getElementById('due_date').value) document.getElementById('due_date').value = due.toISOString().split('T')[0];
+    
+    calculateTotals();
+    checkInvoiceExchangeRate();
+});
+
+document.getElementById('tax_rate').addEventListener('change', calculateTotals);
+</script>
+{% endblock %}

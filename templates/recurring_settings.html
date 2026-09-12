@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Recurring Invoice Settings - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚙️ Recurring Invoice Settings</h1>
+    <p class="page-subtitle">Configure default settings for recurring invoices</p>
+</div>
+
+<form method="POST">
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">🔄 Global Defaults</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="default_frequency">Default Frequency</label>
+                <select id="default_frequency" name="default_recurring_frequency" class="form-control">
+                    <option value="monthly" {% if settings.default_recurring_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                    <option value="weekly" {% if settings.default_recurring_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="biweekly" {% if settings.default_recurring_frequency == 'biweekly' %}selected{% endif %}>Bi-Weekly</option>
+                    <option value="quarterly" {% if settings.default_recurring_frequency == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                    <option value="biannually" {% if settings.default_recurring_frequency == 'biannually' %}selected{% endif %}>Bi-Annually</option>
+                    <option value="annually" {% if settings.default_recurring_frequency == 'annually' %}selected{% endif %}>Annually</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="default_prefix">Default Invoice Prefix</label>
+                <input type="text" id="default_prefix" name="default_recurring_prefix" class="form-control" 
+                       value="{{ settings.default_recurring_prefix or 'REC-' }}" placeholder="REC-">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="auto_generate_recurring" {% if settings.auto_generate_recurring %}checked{% endif %}>
+                <span>Automatically generate invoices when due (requires scheduled task)</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">📧 Email Notifications</h3>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="notify_recurring_generated" {% if settings.notify_recurring_generated %}checked{% endif %}>
+                <span>Notify me when recurring invoices are generated</span>
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="auto_send_recurring" {% if settings.auto_send_recurring %}checked{% endif %}>
+                <span>Automatically send invoices to customers when generated</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+        <a href="{{ url_for('recurring_invoices') }}" class="btn btn-secondary">← Back to Recurring Invoices</a>
+    </div>
+</form>
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 Automation Setup</h3>
+    <p class="text-muted">To automatically generate invoices, set up a scheduled task (cron job) to call:</p>
+    <code style="display: block; background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+        curl -X POST {{ request.url_root }}api/recurring/generate-due -H "X-API-Key: YOUR_API_KEY"
+    </code>
+    <p class="text-muted">Run this daily to automatically generate any due recurring invoices.</p>
+</div>
+{% endblock %}

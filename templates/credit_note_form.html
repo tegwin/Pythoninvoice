@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}{% if credit_note %}Edit Credit Note{% else %}New Credit Note{% endif %} - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📋 {% if credit_note %}Edit Credit Note{% else %}New Credit Note{% endif %}</h1>
+        <p class="page-subtitle">{% if credit_note %}{{ credit_note.credit_note_number }}{% else %}Issue a refund or adjustment{% endif %}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('credit_notes') }}" class="btn btn-secondary">← Back</a>
+    </div>
+</div>
+
+<form method="POST" id="credit-note-form">
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        <div class="panel">
+            <h3 class="section-title" style="margin-top: 0;">Credit Note Details</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Credit Note Number</label>
+                    <input type="text" name="credit_note_number" class="form-control" 
+                           value="{{ credit_note.credit_note_number if credit_note else next_number }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Issue Date</label>
+                    <input type="date" name="issue_date" class="form-control" required id="issue-date"
+                           value="{{ credit_note.issue_date if credit_note else '' }}">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Related Invoice (Optional)</label>
+                    <select name="invoice_id" class="form-control" id="invoice-select">
+                        <option value="">-- Select Invoice to Credit --</option>
+                        {% for invoice in invoices %}
+                        <option value="{{ invoice.id }}"
+                                data-customer="{{ invoice.customer_id }}"
+                                data-currency="{{ invoice.currency }}"
+                                data-tax="{{ invoice.tax_rate }}"
+                                {% if (credit_note and credit_note.invoice_id == invoice.id) or (prefill.get('invoice_id') == invoice.id) %}selected{% endif %}>
+                            {{ invoice.invoice_number }} - {{ invoice.customer_name }} ({{ invoice.currency }} {{ "%.2f"|format(invoice.total) }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Select an invoice to auto-populate items</small>
+                </div>
+                <div class="form-group">
+                    <label>Customer</label>
+                    <select name="customer_id" class="form-control" id="customer-select">
+                        <option value="">-- Select Customer --</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}"
+                                {% if (credit_note and credit_note.customer_id == customer.id) or (prefill.get('customer_id') == customer.id) %}selected{% endif %}>
+                            {{ customer.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Reason</label>
+                    <select name="reason" class="form-control" id="reason-select">
+                        <option value="">-- Select Reason --</option>
+                        {% for reason in reasons %}
+                        <option value="{{ reason }}" {% if credit_note and credit_note.reason == reason %}selected{% endif %}>{{ reason }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tax Rate (%)</label>
+                    <input type="number" name="tax_rate" class="form-control" step="0.01" min="0" max="100" id="tax-rate"
+                           value="{{ credit_note.tax_rate if credit_note else prefill.get('tax_rate', settings.default_tax_rate or 0) }}">
+                </div>
+            </div>
+            
+            <!-- Invoice Items Section (shown when invoice is selected) -->
+            <div id="invoice-items-section" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;">
+                <h4 style="margin: 0 0 1rem 0; color: var(--accent-yellow);">📋 Select Items to Credit</h4>
+                <p class="text-muted" style="margin-bottom: 1rem;">Check the items you want to include in this credit note:</p>
+                <table class="data-table" id="invoice-items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="select-all-items" title="Select All">
+                            </th>
+                            <th>Description</th>
+                            <th class="text-right">Qty</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-body">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-primary" id="load-selected-items" style="margin-top: 1rem;">
+                    ✓ Load Selected Items
+                </button>
+            </div>
+            
+            <h3 class="section-title">Credit Note Line Items</h3>
+            <table class="data-table" id="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Description</th>
+                        <th style="width: 15%;">Qty</th>
+                        <th style="width: 20%;">Unit Price</th>
+                        <th style="width: 10%;">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="items-body">
+                    {% set items = credit_note['items'] if credit_note else prefill.get('items', []) %}
+                    {% if items %}
+                        {% for item in items %}
+                        <tr class="item-row">
+                            <td><input type="text" name="item_description[]" class="form-control" value="{{ item.description }}" required></td>
+                            <td><input type="number" name="item_quantity[]" class="form-control item-qty" value="{{ item.quantity }}" step="0.01" min="0.01" required></td>
+                            <td><input type="number" name="item_price[]" class="form-control item-price" value="{{ item.unit_price }}" step="0.01" min="0" required></td>
+                            <td class="item-total text-right">{{ "%.2f"|format(item.quantity * item.unit_price) }}</td>
+                            <td><button type="button" class="btn btn-sm btn-secondary remove-item">×</button></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="item-row">
+                            <td><input type="text" name="item_description[]" class="form-control" placeholder="Item description" required></td>
+                            <td><input type="number" name="item_quantity[]" class="form-control item-qty" value="1" step="0.01" min="0.01" required></td>
+                            <td><input type="number" name="item_price[]" class="form-control item-price" value="0" step="0.01" min="0" required></td>
+                            <td class="item-total text-right">0.00</td>
+                            <td><button type="button" class="btn btn-sm btn-secondary remove-item">×</button></td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-secondary" id="add-item" style="margin-top: 1rem;">+ Add Item</button>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>Notes</label>
+                <textarea name="notes" class="form-control" rows="3">{{ credit_note.notes if credit_note else '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Summary Sidebar -->
+        <div>
+            <div class="panel" style="position: sticky; top: 1rem;">
+                <h3 class="section-title" style="margin-top: 0;">Summary</h3>
+                <div style="font-size: 1.1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Tax (<span id="tax-rate-display">0</span>%):</span>
+                        <span id="tax-amount">0.00</span>
+                    </div>
+                    <hr>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: bold; color: var(--accent-red);">
+                        <span>Total Credit:</span>
+                        <span id="total">0.00</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        💾 {% if credit_note %}Update{% else %}Create{% endif %} Credit Note
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsBody = document.getElementById('items-body');
+    const addItemBtn = document.getElementById('add-item');
+    const taxRateInput = document.getElementById('tax-rate');
+    const invoiceSelect = document.getElementById('invoice-select');
+    const customerSelect = document.getElementById('customer-select');
+    const invoiceItemsSection = document.getElementById('invoice-items-section');
+    const invoiceItemsBody = document.getElementById('invoice-items-body');
+    const loadSelectedBtn = document.getElementById('load-selected-items');
+    const selectAllCheckbox = document.getElementById('select-all-items');
+    const issueDate = document.getElementById('issue-date');
+    
+    // Set default date
+    if (!issueDate.value) {
+        issueDate.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Invoice data cache
+    let invoiceItemsCache = {};
+    
+    function calculateTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('#items-body .item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const total = qty * price;
+            row.querySelector('.item-total').textContent = total.toFixed(2);
+            subtotal += total;
+        });
+        
+        const taxRate = parseFloat(taxRateInput.value) || 0;
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+        
+        document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+        document.getElementById('tax-rate-display').textContent = taxRate;
+        document.getElementById('tax-amount').textContent = taxAmount.toFixed(2);
+        document.getElementById('total').textContent = total.toFixed(2);
+    }
+    
+    function addItemRow(description = '', quantity = 1, price = 0) {
+        const row = document.createElement('tr');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <td><input type="text" name="item_description[]" class="form-control" placeholder="Item description" value="${description}" required></td>
+            <td><input type="number" name="item_quantity[]" class="form-control item-qty" value="${quantity}" step="0.01" min="0.01" required></td>
+            <td><input type="number" name="item_price[]" class="form-control item-price" value="${price}" step="0.01" min="0" required></td>
+            <td class="item-total text-right">${(quantity * price).toFixed(2)}</td>
+            <td><button type="button" class="btn btn-sm btn-secondary remove-item">×</button></td>
+        `;
+        itemsBody.appendChild(row);
+        attachRowListeners(row);
+        calculateTotals();
+    }
+    
+    function attachRowListeners(row) {
+        row.querySelector('.item-qty').addEventListener('input', calculateTotals);
+        row.querySelector('.item-price').addEventListener('input', calculateTotals);
+        row.querySelector('.remove-item').addEventListener('click', function() {
+            if (document.querySelectorAll('#items-body .item-row').length > 1) {
+                row.remove();
+                calculateTotals();
+            }
+        });
+    }
+    
+    function clearItems() {
+        itemsBody.innerHTML = '';
+        addItemRow();
+    }
+    
+    // Handle invoice selection
+    invoiceSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const invoiceId = this.value;
+        
+        if (invoiceId) {
+            // Auto-populate customer
+            const customerId = selectedOption.dataset.customer;
+            if (customerId) {
+                customerSelect.value = customerId;
+            }
+            
+            // Auto-populate tax rate
+            const taxRate = selectedOption.dataset.tax;
+            if (taxRate !== undefined && taxRate !== '') {
+                taxRateInput.value = taxRate;
+            }
+            
+            // Fetch invoice items
+            fetchInvoiceItems(invoiceId);
+        } else {
+            invoiceItemsSection.style.display = 'none';
+        }
+        
+        calculateTotals();
+    });
+    
+    function fetchInvoiceItems(invoiceId) {
+        // Check cache first
+        if (invoiceItemsCache[invoiceId]) {
+            displayInvoiceItems(invoiceItemsCache[invoiceId]);
+            return;
+        }
+        
+        // Fetch from session-authenticated endpoint
+        fetch(`/credit-notes/invoice-items/${invoiceId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.data.items) {
+                    invoiceItemsCache[invoiceId] = data.data.items;
+                    displayInvoiceItems(data.data.items);
+                } else {
+                    console.error('Failed to fetch items:', data.error);
+                    invoiceItemsSection.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching invoice items:', err);
+                invoiceItemsSection.style.display = 'none';
+            });
+    }
+    
+    function displayInvoiceItems(items) {
+        invoiceItemsBody.innerHTML = '';
+        
+        if (!items || items.length === 0) {
+            invoiceItemsSection.style.display = 'none';
+            return;
+        }
+        
+        items.forEach((item, index) => {
+            const row = document.createElement('tr');
+            const total = (item.quantity * item.unit_price).toFixed(2);
+            row.innerHTML = `
+                <td style="text-align: center;">
+                    <input type="checkbox" class="invoice-item-checkbox" data-index="${index}" checked>
+                </td>
+                <td>${item.description}</td>
+                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">${parseFloat(item.unit_price).toFixed(2)}</td>
+                <td class="text-right">${total}</td>
+            `;
+            invoiceItemsBody.appendChild(row);
+        });
+        
+        invoiceItemsSection.style.display = 'block';
+        
+        // Store items for later loading
+        invoiceItemsSection.dataset.items = JSON.stringify(items);
+    }
+    
+    // Select all checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        document.querySelectorAll('.invoice-item-checkbox').forEach(cb => {
+            cb.checked = this.checked;
+        });
+    });
+    
+    // Load selected items button
+    loadSelectedBtn.addEventListener('click', function() {
+        const items = JSON.parse(invoiceItemsSection.dataset.items || '[]');
+        const checkboxes = document.querySelectorAll('.invoice-item-checkbox');
+        
+        // Clear existing items
+        itemsBody.innerHTML = '';
+        
+        let hasItems = false;
+        checkboxes.forEach((cb, index) => {
+            if (cb.checked && items[index]) {
+                hasItems = true;
+                addItemRow(
+                    items[index].description,
+                    items[index].quantity,
+                    items[index].unit_price
+                );
+            }
+        });
+        
+        if (!hasItems) {
+            addItemRow();
+        }
+        
+        calculateTotals();
+        
+        // Scroll to items
+        document.querySelector('h3.section-title:nth-of-type(2)').scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    // Attach listeners to existing rows
+    document.querySelectorAll('#items-body .item-row').forEach(attachRowListeners);
+    addItemBtn.addEventListener('click', () => addItemRow());
+    taxRateInput.addEventListener('input', calculateTotals);
+    
+    // Trigger invoice change if prefilled
+    if (invoiceSelect.value) {
+        invoiceSelect.dispatchEvent(new Event('change'));
+    }
+    
+    calculateTotals();
+});
+</script>
+{% endblock %}

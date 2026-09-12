@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Two-Factor Authentication - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🛡️ Setup Two-Factor Authentication</h1>
+    <p class="page-subtitle">Add an extra layer of security to your account</p>
+</div>
+
+<div class="twofa-setup">
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">Step 1: Scan QR Code</h3>
+        <p class="text-muted">Use your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.) to scan this QR code.</p>
+        
+        <div class="qr-container">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="2FA QR Code" class="qr-code">
+        </div>
+        
+        <div class="manual-entry">
+            <p class="text-muted">Can't scan? Enter this code manually:</p>
+            <div class="secret-key">
+                <code id="secret-key">{{ secret }}</code>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="copySecret()">📋 Copy</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">Step 2: Verify Code</h3>
+        <p class="text-muted">Enter the 6-digit code from your authenticator app to complete setup.</p>
+        
+        <form method="POST" action="{{ url_for('verify_2fa_setup') }}">
+            <input type="hidden" name="secret" value="{{ secret }}">
+            
+            <div class="form-group">
+                <label class="form-label" for="totp_code">Verification Code</label>
+                <input type="text" id="totp_code" name="totp_code" class="form-control totp-input" 
+                       required maxlength="6" pattern="[0-9]{6}" placeholder="000000"
+                       autocomplete="one-time-code" inputmode="numeric">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">✅ Verify & Enable 2FA</button>
+        </form>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">💡 Important Information</h3>
+        <ul class="info-list">
+            <li>Save your backup codes in a secure location</li>
+            <li>If you lose access to your authenticator, you can use backup codes to sign in</li>
+            <li>You'll need to enter a code from your authenticator app each time you sign in</li>
+            <li>Keep your authenticator app updated</li>
+        </ul>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('profile') }}" class="btn btn-secondary">← Back to Profile</a>
+</div>
+
+<style>
+.twofa-setup {
+    max-width: 600px;
+}
+
+.qr-container {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    display: inline-block;
+    margin: 1rem 0;
+}
+
+.qr-code {
+    width: 200px;
+    height: 200px;
+}
+
+.manual-entry {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.secret-key {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.secret-key code {
+    background: var(--bg-dark);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--accent-yellow);
+    flex: 1;
+    word-break: break-all;
+}
+
+.totp-input {
+    font-size: 2rem;
+    text-align: center;
+    letter-spacing: 0.5rem;
+    max-width: 200px;
+    font-family: monospace;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-list li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.info-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--accent-yellow);
+}
+</style>
+
+<script>
+function copySecret() {
+    const secret = document.getElementById('secret-key').textContent;
+    navigator.clipboard.writeText(secret);
+    alert('Secret key copied!');
+}
+
+// Auto-format TOTP input
+document.getElementById('totp_code').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+});
+</script>
+{% endblock %}

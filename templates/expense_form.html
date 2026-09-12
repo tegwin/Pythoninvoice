@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if expense else 'New' }} Expense - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🧾 {{ 'Edit' if expense else 'New' }} Expense</h1>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="panel">
+    <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="description">Description *</label>
+            <input type="text" id="description" name="description" class="form-control" required
+                   value="{{ expense.description if expense else '' }}"
+                   placeholder="What was this expense for?">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="expense_date">Date *</label>
+            <input type="date" id="expense_date" name="expense_date" class="form-control" required
+                   value="{{ expense.expense_date if expense else today }}">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="amount">Amount *</label>
+            <input type="number" id="amount" name="amount" class="form-control" required
+                   value="{{ expense.amount if expense else '' }}"
+                   step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="currency">Currency</label>
+            <select id="currency" name="currency" class="form-control">
+                {% for code in enabled_currencies %}
+                <option value="{{ code }}" {% if (expense and expense.currency == code) or (not expense and code == default_currency) %}selected{% endif %}>
+                    {{ code }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="tax_rate">Tax Rate (%)</label>
+            <input type="number" id="tax_rate" name="tax_rate" class="form-control"
+                   value="{{ expense.tax_rate if expense else 20 }}"
+                   step="0.01" min="0" max="100">
+        </div>
+        <div class="form-group">
+            <label class="form-check" style="margin-top: 2rem;">
+                <input type="checkbox" name="amount_includes_tax" value="1" checked>
+                <span>Amount includes tax</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="category">Category</label>
+            <select id="category" name="category" class="form-control">
+                <option value="">-- Select Category --</option>
+                {% for cat in expense_categories %}
+                <option value="{{ cat }}" {% if expense and expense.category == cat %}selected{% endif %}>
+                    {{ cat }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="supplier_id">Supplier/Vendor</label>
+            <select id="supplier_id" name="supplier_id" class="form-control">
+                <option value="">-- Select Supplier (Optional) --</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}" {% if expense and expense.supplier_id == supplier.id %}selected{% endif %}>
+                    {{ supplier.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="coa_id">Expense Account</label>
+            <select id="coa_id" name="coa_id" class="form-control">
+                <option value="">-- Select Account --</option>
+                {% for account in coa_accounts %}
+                <option value="{{ account.id }}" {% if expense and expense.coa_id == account.id %}selected{% endif %}>
+                    {{ account.code }} - {{ account.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="payment_method">Payment Method</label>
+            <select id="payment_method" name="payment_method" class="form-control">
+                <option value="">-- Select Method --</option>
+                {% for method in payment_methods %}
+                <option value="{{ method }}" {% if expense and expense.payment_method == method %}selected{% endif %}>
+                    {{ method }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="reference">Reference / Receipt #</label>
+            <input type="text" id="reference" name="reference" class="form-control"
+                   value="{{ expense.reference if expense else '' }}"
+                   placeholder="Transaction ID, receipt number, etc.">
+        </div>
+    </div>
+    
+    <!-- Receipt Upload -->
+    <div class="form-group">
+        <label class="form-label">Receipt</label>
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--border);">
+            {% if expense and expense.receipt_path %}
+            <div class="flex gap-4" style="align-items: center; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">📎</span>
+                <div>
+                    <strong>Receipt attached</strong>
+                    <br>
+                    <a href="{{ url_for('view_receipt', expense_id=expense.id) }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">View Receipt</a>
+                </div>
+            </div>
+            <label class="form-check">
+                <input type="checkbox" name="remove_receipt" value="1">
+                <span>Remove current receipt</span>
+            </label>
+            <hr style="margin: 1rem 0; border-color: var(--border);">
+            <p class="text-muted" style="margin-bottom: 0.5rem;">Or upload a new receipt:</p>
+            {% else %}
+            <div class="text-center" style="margin-bottom: 1rem;">
+                <span style="font-size: 3rem;">📷</span>
+                <p class="text-muted">Upload a photo or scan of your receipt</p>
+            </div>
+            {% endif %}
+            
+            <input type="file" id="receipt" name="receipt" class="form-control"
+                   accept=".png,.jpg,.jpeg,.gif,.pdf,.webp"
+                   style="background: var(--bg-medium);">
+            <small class="text-muted">Accepted: PNG, JPG, GIF, PDF, WebP (max 10MB)</small>
+            
+            <!-- Camera capture for mobile -->
+            <div style="margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('receipt').click()">
+                    📱 Take Photo / Choose File
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Options -->
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="is_billable" value="1" 
+                       {% if expense and expense.is_billable %}checked{% endif %}>
+                <span>Billable to client</span>
+            </label>
+            <small class="text-muted" style="display: block; margin-left: 1.5rem;">
+                This expense can be added to a client invoice
+            </small>
+        </div>
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="is_reimbursable" value="1" 
+                       {% if expense and expense.is_reimbursable %}checked{% endif %}>
+                <span>Reimbursable</span>
+            </label>
+            <small class="text-muted" style="display: block; margin-left: 1.5rem;">
+                Paid personally, needs to be reimbursed
+            </small>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="3"
+                  placeholder="Additional details...">{{ expense.notes if expense else '' }}</textarea>
+    </div>
+    
+    {% if expense %}
+    <div class="form-group">
+        <label class="form-label" for="status">Status</label>
+        <select id="status" name="status" class="form-control">
+            <option value="pending" {% if expense.status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if expense.status == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if expense.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            <option value="reimbursed" {% if expense.status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
+        </select>
+    </div>
+    {% endif %}
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">💾 {{ 'Update' if expense else 'Save' }} Expense</button>
+        <a href="{{ url_for('expenses') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Invoice Manager{% endblock %}</title>
+    
+    <!-- Favicon - Place your favicon files in static/ folder -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0d0d1a;
+            --bg-medium: #141428;
+            --bg-light: #1e1e3f;
+            --bg-card: #1a1a35;
+            --accent-red: #e94560;
+            --accent-yellow: #f0a500;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border: #2d2d5a;
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background: var(--bg-medium);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--accent-red);
+        }
+
+        .brand-logo-img {
+            height: 40px;
+            max-width: 150px;
+            object-fit: contain;
+        }
+
+        .logo-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-yellow), var(--accent-red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-light);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border);
+        }
+
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content {
+            display: block;
+        }
+
+        .nav-dropdown-content a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .nav-dropdown-content a:hover {
+            background: var(--bg-light);
+            color: var(--accent-yellow);
+        }
+
+        /* User Dropdown Styles */
+        .nav-user-dropdown {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border);
+        }
+
+        .user-menu-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar-small {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            color: var(--accent-yellow);
+            overflow: hidden;
+        }
+
+        .user-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-dropdown-content {
+            right: 0;
+            left: auto;
+            min-width: 250px;
+        }
+
+        .user-dropdown-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--bg-dark);
+        }
+
+        .user-avatar-medium {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--accent-yellow);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .user-avatar-medium img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-dropdown-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .user-dropdown-info strong {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-dropdown-info span {
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0.25rem 0;
+        }
+
+        .logout-link {
+            color: var(--accent-red) !important;
+        }
+
+        .logout-link:hover {
+            background: rgba(233, 69, 96, 0.1) !important;
+        }
+
+        .user-badge {
+            background: var(--bg-light);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+            color: var(--accent-yellow);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #d13a52;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-success { background: var(--accent-green); color: white; }
+        .btn-success:hover { background: #0d9668; }
+
+        .btn-warning { background: var(--accent-yellow); color: var(--bg-dark); }
+        .btn-warning:hover { background: #d99400; }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header { margin-bottom: 2rem; }
+
+        .page-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle { color: var(--text-secondary); font-size: 1.1rem; }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .panel-title { font-size: 1.25rem; font-weight: 600; }
+
+        .form-group { margin-bottom: 1.25rem; }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-control::placeholder { color: var(--text-muted); }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-row > .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-blue);
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--accent-green); color: var(--accent-green); }
+        .alert-error { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; }
+        .alert-warning { background: rgba(240, 165, 0, 0.2); border: 1px solid var(--accent-yellow); color: var(--accent-yellow); }
+        .alert-info { background: rgba(59, 130, 246, 0.2); border: 1px solid var(--accent-blue); color: var(--accent-blue); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.yellow { color: var(--accent-yellow); }
+        .stat-value.red { color: var(--accent-red); }
+        .stat-value.blue { color: var(--accent-blue); }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-draft { background: var(--bg-light); color: var(--text-secondary); }
+        .badge-sent { background: var(--accent-blue); color: white; }
+        .badge-paid { background: var(--accent-green); color: white; }
+        .badge-partial { background: var(--accent-yellow); color: var(--bg-dark); }
+        .badge-overdue { background: #ef4444; color: white; }
+        .badge-cancelled { background: var(--bg-medium); color: var(--text-muted); }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-yellow);
+            margin: 1.5rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: var(--bg-medium);
+            font-weight: 600;
+            color: var(--accent-yellow);
+        }
+
+        .data-table tr:hover td {
+            background: var(--bg-light);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+        .empty-state-title { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--bg-medium);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-yellow);
+            margin: 0;
+        }
+
+        .card-body { padding: 1.5rem; }
+
+        .mb-4 { margin-bottom: 1.5rem; }
+        .mt-4 { margin-top: 1.5rem; }
+        .text-muted { color: var(--text-muted); }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-4 { gap: 1rem; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+
+        @media (max-width: 768px) {
+            .navbar-content { flex-direction: column; gap: 1rem; }
+            .nav-links { flex-wrap: wrap; justify-content: center; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .nav-user { border-left: none; padding-left: 0; }
+            .form-row { flex-direction: column; }
+            .form-row > .form-group { min-width: 100%; }
+        }
+
+        /* Invoice item table styles */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .items-table th, .items-table td {
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .items-table th {
+            background: var(--bg-medium);
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .items-table input, .items-table select {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .items-table .remove-row {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .items-table .remove-row:hover {
+            color: #ff6b6b;
+        }
+
+        /* Footer */
+        .app-footer {
+            background: var(--bg-dark);
+            border-top: 1px solid var(--border);
+            padding: 1.5rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-content p {
+            margin: 0.25rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .footer-support a {
+            color: var(--accent-yellow);
+            text-decoration: none;
+        }
+
+        .footer-support a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    {% if session.user_id %}
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="{{ url_for('dashboard') }}" class="logo">
+                {% if g.brand_logo and g.show_brand_logo %}
+                {% set logo_filename = g.brand_logo.replace('\\', '/').split('/')[-1] %}
+                <img src="{{ url_for('serve_upload', filename=logo_filename) }}" alt="Logo" class="brand-logo-img">
+                {% else %}
+                <span class="logo-icon">📄</span>
+                {% endif %}
+                {% if g.show_brand_name %}
+                <span class="logo-text">{{ g.brand_name or 'Invoice Manager' }}</span>
+                {% endif %}
+            </a>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">📊 Dashboard</a>
+                <div class="nav-dropdown">
+                    <a href="{{ url_for('invoices') }}" class="nav-link {% if request.endpoint in ['invoices', 'new_invoice', 'view_invoice', 'edit_invoice', 'bulk_invoices', 'recurring_invoices', 'new_recurring_invoice', 'edit_recurring_invoice', 'credit_notes', 'credit_note_new', 'credit_note_detail', 'credit_note_edit'] %}active{% endif %}">📄 Invoices ▾</a>
+                    <div class="nav-dropdown-content">
+                        <a href="{{ url_for('invoices') }}">📄 All Invoices</a>
+                        <a href="{{ url_for('new_invoice') }}">➕ New Invoice</a>
+                        <a href="{{ url_for('recurring_invoices') }}">🔄 Recurring</a>
+                        <a href="{{ url_for('credit_notes') }}">📋 Credit Notes</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <a href="{{ url_for('bills') }}" class="nav-link {% if request.endpoint in ['bills', 'new_bill', 'view_bill', 'edit_bill', 'pay_bill', 'expenses', 'new_expense', 'view_expense', 'edit_expense', 'suppliers', 'new_supplier', 'view_supplier', 'edit_supplier'] %}active{% endif %}">📥 Payables ▾</a>
+                    <div class="nav-dropdown-content">
+                        <a href="{{ url_for('bills') }}">📥 Bills</a>
+                        <a href="{{ url_for('expenses') }}">🧾 Expenses</a>
+                        <a href="{{ url_for('suppliers') }}">🏭 Suppliers</a>
+                    </div>
+                </div>
+                <a href="{{ url_for('customers') }}" class="nav-link {% if request.endpoint in ['customers', 'new_customer', 'view_customer', 'edit_customer', 'bulk_customers'] %}active{% endif %}">👥 Customers</a>
+                <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint in ['reports', 'report_profit_loss', 'report_balance_sheet', 'report_vat', 'report_tax_summary', 'report_aged_receivables', 'report_aged_payables'] %}active{% endif %}">📊 Reports</a>
+                <a href="{{ url_for('products') }}" class="nav-link {% if request.endpoint in ['products', 'new_product', 'edit_product'] %}active{% endif %}">📦 Products</a>
+                <a href="{{ url_for('settings') }}" class="nav-link {% if request.endpoint in ['settings', 'api_keys', 'webhooks', 'email_settings', 'team_management', 'database_settings', 'integrations', 'chart_of_accounts'] %}active{% endif %}">⚙️ Settings</a>
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-link {% if request.endpoint in ['api_help', 'about'] %}active{% endif %}">❓ Help ▾</a>
+                    <div class="nav-dropdown-content">
+                        <a href="{{ url_for('about') }}">ℹ️ About</a>
+                        <a href="{{ url_for('api_help') }}">📚 API Documentation</a>
+                        <a href="mailto:helpdesk@sondelaconsulting.com">📧 Contact Support</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown nav-user-dropdown">
+                    <a href="#" class="nav-link user-menu-trigger">
+                        <span class="user-avatar-small">
+                            {% if session.avatar_path %}
+                            <img src="{{ url_for('serve_upload', filename=session.avatar_path.split('/')[-1]) }}" alt="">
+                            {% else %}
+                            {{ session.username[0]|upper }}
+                            {% endif %}
+                        </span>
+                        {{ session.username }}{% if session.user_role and session.user_role != 'owner' %} <small>({{ session.user_role|title }})</small>{% endif %} ▾
+                    </a>
+                    <div class="nav-dropdown-content user-dropdown-content">
+                        <div class="user-dropdown-header">
+                            <div class="user-avatar-medium">
+                                {% if session.avatar_path %}
+                                <img src="{{ url_for('static', filename='uploads/' + session.avatar_path.split('/')[-1]) }}" alt="">
+                                {% else %}
+                                {{ session.username[0]|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="user-dropdown-info">
+                                <strong>{{ session.display_name or session.username }}</strong>
+                                <span class="text-muted">{{ session.email or '' }}</span>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('profile') }}">👤 My Profile</a>
+                        <a href="{{ url_for('profile') }}#password">🔐 Change Password</a>
+                        <a href="{{ url_for('profile') }}#2fa">🛡️ Two-Factor Auth</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('logout') }}" class="logout-link">🚪 Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if g.show_footer %}
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p>{{ g.footer_text }}</p>
+        </div>
+    </footer>
+    {% endif %}
+
+    <script>
+        document.querySelectorAll('.alert').forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-10px)';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

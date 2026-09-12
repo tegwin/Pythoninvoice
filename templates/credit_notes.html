@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Notes - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📋 Credit Notes</h1>
+        <p class="page-subtitle">Issue refunds and adjustments to customers</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('credit_note_new') }}" class="btn btn-primary">+ New Credit Note</a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="panel" style="text-align: center;">
+        <h3 class="text-muted" style="margin: 0; font-size: 0.9rem;">Total Issued</h3>
+        <p style="font-size: 1.75rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-blue);">
+            {{ currency_symbol }}{{ "%.2f"|format(total_issued) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center;">
+        <h3 class="text-muted" style="margin: 0; font-size: 0.9rem;">Applied to Invoices</h3>
+        <p style="font-size: 1.75rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-green);">
+            {{ currency_symbol }}{{ "%.2f"|format(total_used) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center;">
+        <h3 class="text-muted" style="margin: 0; font-size: 0.9rem;">Available Balance</h3>
+        <p style="font-size: 1.75rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-yellow);">
+            {{ currency_symbol }}{{ "%.2f"|format(total_available) }}
+        </p>
+    </div>
+</div>
+
+<!-- Credit Notes Table -->
+<div class="panel">
+    {% if credit_notes %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Credit Note #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Original Invoice</th>
+                    <th>Reason</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-right">Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cn in credit_notes %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('credit_note_detail', credit_note_id=cn.id) }}" style="font-weight: 600;">
+                            {{ cn.credit_note_number }}
+                        </a>
+                    </td>
+                    <td>{{ cn.customer_name or '-' }}</td>
+                    <td>{{ cn.issue_date }}</td>
+                    <td>
+                        {% if cn.original_invoice_number %}
+                        <a href="{{ url_for('view_invoice', invoice_id=cn.invoice_id) }}">
+                            {{ cn.original_invoice_number }}
+                        </a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>{{ cn.reason or '-' }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(cn.total) }}</td>
+                    <td class="text-right">
+                        {% set balance = cn.total - cn.amount_used %}
+                        {% if balance > 0.01 %}
+                        <span style="color: var(--accent-yellow);">{{ currency_symbol }}{{ "%.2f"|format(balance) }}</span>
+                        {% else %}
+                        <span class="text-muted">{{ currency_symbol }}0.00</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if cn.status == 'draft' %}
+                        <span class="badge badge-draft">Draft</span>
+                        {% elif cn.status == 'issued' %}
+                        <span class="badge badge-sent">Issued</span>
+                        {% elif cn.status == 'partial' %}
+                        <span class="badge badge-partial">Partial</span>
+                        {% elif cn.status == 'applied' %}
+                        <span class="badge badge-paid">Applied</span>
+                        {% elif cn.status == 'cancelled' %}
+                        <span class="badge badge-overdue">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('credit_note_detail', credit_note_id=cn.id) }}" class="btn btn-sm btn-secondary">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">No credit notes yet</p>
+        <a href="{{ url_for('credit_note_new') }}" class="btn btn-primary">Create First Credit Note</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

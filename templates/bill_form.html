@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if bill else 'New' }} Bill - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 {{ 'Edit' if bill else 'New' }} Bill</h1>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="panel">
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="supplier_id">Supplier *</label>
+            <select id="supplier_id" name="supplier_id" class="form-control" required>
+                <option value="">-- Select Supplier --</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}" 
+                        data-terms="{{ supplier.payment_terms }}"
+                        data-coa="{{ supplier.default_coa_id or '' }}"
+                        {% if (bill and bill.supplier_id == supplier.id) or (request.args.get('supplier_id')|int == supplier.id) %}selected{% endif %}>
+                    {{ supplier.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">
+                <a href="{{ url_for('new_supplier') }}" target="_blank">+ Add new supplier</a>
+            </small>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="bill_number">Bill Number</label>
+            <input type="text" id="bill_number" name="bill_number" class="form-control"
+                   value="{{ bill.bill_number if bill else '' }}"
+                   placeholder="Auto-generated if blank">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="reference">Supplier Reference</label>
+            <input type="text" id="reference" name="reference" class="form-control"
+                   value="{{ bill.reference if bill else '' }}"
+                   placeholder="Supplier's invoice number">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="bill_date">Bill Date *</label>
+            <input type="date" id="bill_date" name="bill_date" class="form-control" required
+                   value="{{ bill.bill_date if bill else today }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="due_date">Due Date</label>
+            <input type="date" id="due_date" name="due_date" class="form-control"
+                   value="{{ bill.due_date if bill else '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="currency">Currency</label>
+            <select id="currency" name="currency" class="form-control" onchange="checkExchangeRate()">
+                {% for code in enabled_currencies %}
+                <option value="{{ code }}" {% if (bill and bill.currency == code) or (not bill and code == default_currency) %}selected{% endif %}>
+                    {{ code }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" id="exchange_rate_group" style="display: none;">
+            <label class="form-label" for="exchange_rate">Exchange Rate (to {{ default_currency }})</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" id="exchange_rate" name="exchange_rate" class="form-control"
+                       value="{{ bill.exchange_rate if bill else 1 }}"
+                       step="0.000001" min="0.000001">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fetchExchangeRate()" title="Get current rate">🔄</button>
+            </div>
+            <small class="text-muted">1 <span id="bill_currency_label">USD</span> = <span id="rate_display">1</span> {{ default_currency }}</small>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="tax_rate">Tax Rate (%)</label>
+            <input type="number" id="tax_rate" name="tax_rate" class="form-control"
+                   value="{{ bill.tax_rate if bill else settings.default_tax_rate or 20 }}"
+                   step="0.01" min="0" max="100">
+        </div>
+    </div>
+    
+    <input type="hidden" id="base_currency" name="base_currency" value="{{ default_currency }}">
+    
+    <h3 class="section-title">Line Items</h3>
+    
+    <div class="table-container">
+        <table class="data-table" id="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Description</th>
+                    <th style="width: 20%;">Account</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 15%;">Unit Price</th>
+                    <th style="width: 12%;">Total</th>
+                    <th style="width: 3%;"></th>
+                </tr>
+            </thead>
+            <tbody id="items-body">
+                {% if bill and bill['items'] %}
+                {% for item in bill['items'] %}
+                <tr class="item-row">
+                    <td>
+                        <input type="text" name="item_description[]" class="form-control" 
+                               value="{{ item.description }}" placeholder="Description">
+                    </td>
+                    <td>
+                        <select name="item_coa_id[]" class="form-control">
+                            <option value="">-- Account --</option>
+                            {% for account in coa_accounts %}
+                            <option value="{{ account.id }}" {% if item.coa_id == account.id %}selected{% endif %}>
+                                {{ account.code }} - {{ account.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" name="item_quantity[]" class="form-control item-qty" 
+                               value="{{ item.quantity }}" step="0.01" min="0" onchange="calculateRow(this)">
+                    </td>
+                    <td>
+                        <input type="number" name="item_price[]" class="form-control item-price" 
+                               value="{{ item.unit_price }}" step="0.01" min="0" onchange="calculateRow(this)">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control item-total" value="{{ "%.2f"|format(item.total or 0) }}" readonly>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">×</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr class="item-row">
+                    <td>
+                        <input type="text" name="item_description[]" class="form-control" placeholder="Description">
+                    </td>
+                    <td>
+                        <select name="item_coa_id[]" class="form-control">
+                            <option value="">-- Account --</option>
+                            {% for account in coa_accounts %}
+                            <option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" name="item_quantity[]" class="form-control item-qty" value="1" step="0.01" min="0" onchange="calculateRow(this)">
+                    </td>
+                    <td>
+                        <input type="number" name="item_price[]" class="form-control item-price" value="0" step="0.01" min="0" onchange="calculateRow(this)">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control item-total" value="0.00" readonly>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">×</button>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6">
+                        <button type="button" class="btn btn-secondary" onclick="addRow()">+ Add Line</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: right;"><strong>Subtotal:</strong></td>
+                    <td><input type="text" id="subtotal" class="form-control" value="{{ "%.2f"|format(bill.subtotal or 0) if bill else '0.00' }}" readonly></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: right;"><strong>Tax (<span id="tax-rate-display">{{ bill.tax_rate if bill else settings.default_tax_rate or 20 }}</span>%):</strong></td>
+                    <td><input type="text" id="tax-amount" class="form-control" value="{{ "%.2f"|format(bill.tax_amount or 0) if bill else '0.00' }}" readonly></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="text-align: right;"><strong style="font-size: 1.2rem;">Total:</strong></td>
+                    <td><input type="text" id="total" class="form-control" value="{{ "%.2f"|format(bill.total or 0) if bill else '0.00' }}" readonly style="font-weight: bold; font-size: 1.1rem;"></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="3"
+                  placeholder="Internal notes...">{{ bill.notes if bill else '' }}</textarea>
+    </div>
+    
+    <!-- Attachment Upload -->
+    <div class="form-group">
+        <label class="form-label">Supplier Invoice / Attachment</label>
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--border);">
+            {% if bill and bill.attachment_path %}
+            <div class="flex gap-4" style="align-items: center; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">📎</span>
+                <div>
+                    <strong>Attachment uploaded</strong>
+                    <br>
+                    <a href="{{ url_for('view_bill_attachment', bill_id=bill.id) }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem;">View Attachment</a>
+                </div>
+            </div>
+            <label class="form-check">
+                <input type="checkbox" name="remove_attachment" value="1">
+                <span>Remove current attachment</span>
+            </label>
+            <hr style="margin: 1rem 0; border-color: var(--border);">
+            <p class="text-muted" style="margin-bottom: 0.5rem;">Or upload a new attachment:</p>
+            {% else %}
+            <div class="text-center" style="margin-bottom: 1rem;">
+                <span style="font-size: 3rem;">📄</span>
+                <p class="text-muted">Upload the supplier's invoice or related document</p>
+            </div>
+            {% endif %}
+            
+            <input type="file" id="attachment" name="attachment" class="form-control"
+                   accept=".png,.jpg,.jpeg,.gif,.pdf,.webp,.doc,.docx"
+                   style="background: var(--bg-medium);">
+            <small class="text-muted">Accepted: PNG, JPG, GIF, PDF, WebP, DOC, DOCX (max 20MB)</small>
+        </div>
+    </div>
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">💾 {{ 'Update' if bill else 'Create' }} Bill</button>
+        <a href="{{ url_for('bills') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<script>
+function addRow() {
+    const tbody = document.getElementById('items-body');
+    const newRow = document.createElement('tr');
+    newRow.className = 'item-row';
+    newRow.innerHTML = `
+        <td>
+            <input type="text" name="item_description[]" class="form-control" placeholder="Description">
+        </td>
+        <td>
+            <select name="item_coa_id[]" class="form-control">
+                <option value="">-- Account --</option>
+                {% for account in coa_accounts %}
+                <option value="{{ account.id }}">{{ account.code }} - {{ account.name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="item_quantity[]" class="form-control item-qty" value="1" step="0.01" min="0" onchange="calculateRow(this)">
+        </td>
+        <td>
+            <input type="number" name="item_price[]" class="form-control item-price" value="0" step="0.01" min="0" onchange="calculateRow(this)">
+        </td>
+        <td>
+            <input type="text" class="form-control item-total" value="0.00" readonly>
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">×</button>
+        </td>
+    `;
+    tbody.appendChild(newRow);
+}
+
+function removeRow(btn) {
+    const rows = document.querySelectorAll('.item-row');
+    if (rows.length > 1) {
+        btn.closest('tr').remove();
+        calculateTotals();
+    }
+}
+
+function calculateRow(input) {
+    const row = input.closest('tr');
+    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+    const total = qty * price;
+    row.querySelector('.item-total').value = total.toFixed(2);
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.item-total').forEach(input => {
+        subtotal += parseFloat(input.value) || 0;
+    });
+    
+    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
+    
+    document.getElementById('subtotal').value = subtotal.toFixed(2);
+    document.getElementById('tax-amount').value = taxAmount.toFixed(2);
+    document.getElementById('total').value = total.toFixed(2);
+    document.getElementById('tax-rate-display').textContent = taxRate;
+}
+
+document.getElementById('tax_rate').addEventListener('change', calculateTotals);
+
+// Auto-calculate due date based on supplier terms
+document.getElementById('supplier_id').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const terms = option.dataset.terms;
+    const billDate = document.getElementById('bill_date').value;
+    
+    if (terms && billDate) {
+        const date = new Date(billDate);
+        date.setDate(date.getDate() + parseInt(terms));
+        document.getElementById('due_date').value = date.toISOString().split('T')[0];
+    }
+});
+
+document.getElementById('bill_date').addEventListener('change', function() {
+    const supplierSelect = document.getElementById('supplier_id');
+    const option = supplierSelect.options[supplierSelect.selectedIndex];
+    const terms = option.dataset.terms;
+    
+    if (terms && this.value) {
+        const date = new Date(this.value);
+        date.setDate(date.getDate() + parseInt(terms));
+        document.getElementById('due_date').value = date.toISOString().split('T')[0];
+    }
+});
+
+// Exchange rate handling
+const baseCurrency = '{{ default_currency }}';
+
+function checkExchangeRate() {
+    const currency = document.getElementById('currency').value;
+    const rateGroup = document.getElementById('exchange_rate_group');
+    const currencyLabel = document.getElementById('bill_currency_label');
+    
+    if (currency !== baseCurrency) {
+        rateGroup.style.display = 'block';
+        currencyLabel.textContent = currency;
+        // Auto-fetch rate if empty or 1
+        const currentRate = parseFloat(document.getElementById('exchange_rate').value) || 1;
+        if (currentRate === 1) {
+            fetchExchangeRate();
+        }
+    } else {
+        rateGroup.style.display = 'none';
+        document.getElementById('exchange_rate').value = 1;
+    }
+}
+
+function fetchExchangeRate() {
+    const currency = document.getElementById('currency').value;
+    if (currency === baseCurrency) return;
+    
+    const rateDisplay = document.getElementById('rate_display');
+    rateDisplay.textContent = 'Loading...';
+    
+    fetch(`/api/exchange-rate?from=${currency}&to=${baseCurrency}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.rate && data.rate !== 1) {
+                document.getElementById('exchange_rate').value = data.rate.toFixed(6);
+                rateDisplay.textContent = data.rate.toFixed(4);
+            } else if (data.message) {
+                rateDisplay.innerHTML = '<span style="color: var(--accent-yellow);">Enter rate manually (no API key)</span>';
+            } else {
+                rateDisplay.textContent = '1.0000';
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching rate:', err);
+            rateDisplay.innerHTML = '<span style="color: var(--accent-red);">Error - enter manually</span>';
+        });
+}
+
+document.getElementById('exchange_rate').addEventListener('input', function() {
+    document.getElementById('rate_display').textContent = parseFloat(this.value || 1).toFixed(4);
+});
+
+// Check on page load
+checkExchangeRate();
+
+// Initial calculation
+calculateTotals();
+</script>
+{% endblock %}

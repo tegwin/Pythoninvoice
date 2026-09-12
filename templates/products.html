@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Products & Services - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📦 Products & Services</h1>
+    <p class="page-subtitle">Manage items you can add to invoices</p>
+</div>
+
+<div class="panel mb-4">
+    <div class="flex gap-2">
+        <a href="{{ url_for('new_product') }}" class="btn btn-primary">➕ Add Product/Service</a>
+        <a href="{{ url_for('import_products') }}" class="btn btn-secondary">📥 Import</a>
+        <a href="{{ url_for('export_products') }}" class="btn btn-secondary">📤 Export</a>
+    </div>
+</div>
+
+<div class="panel">
+    {% if products %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Unit Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr style="{% if not product.active %}opacity: 0.5;{% endif %}">
+                <td><strong>{{ product.name }}</strong>{% if product.sku %} <span class="text-muted">({{ product.sku }})</span>{% endif %}</td>
+                <td>{{ product.description or '-' }}</td>
+                <td>
+                    {% if product.is_service %}
+                    <span class="badge badge-sent">Service</span>
+                    {% if product.billing_term %}
+                    <span class="badge badge-partial" style="margin-left: 0.25rem;">{{ product.billing_term|title }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="badge badge-draft">Product</span>
+                    {% endif %}
+                </td>
+                <td>{{ "%.2f"|format(product.unit_price or 0) }} / {{ product.unit or 'unit' }}</td>
+                <td>
+                    {% if product.active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <h3 class="empty-state-title">No Products Yet</h3>
+        <p>Add products or services to quickly add them to invoices.</p>
+        <a href="{{ url_for('new_product') }}" class="btn btn-primary" style="margin-top: 1rem;">➕ Add Product</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

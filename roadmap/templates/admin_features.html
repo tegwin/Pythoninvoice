@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Features{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>✨ Manage Features</h1>
+    <p>Add and edit roadmap features</p>
+</div>
+
+<div class="panel mb-4">
+    <h3 style="margin-top: 0;">➕ Add New Feature</h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="add">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Phase</label>
+                <select name="phase_id" class="form-control" required>
+                    {% for phase in phases %}
+                    <option value="{{ phase.id }}">{{ phase.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label class="form-label">Feature Title</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g., Recurring invoices">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="planned">Planned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select name="priority" class="form-control">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" name="description" class="form-control" placeholder="Brief description of this feature">
+        </div>
+        <button type="submit" class="btn btn-primary">➕ Add Feature</button>
+    </form>
+</div>
+
+<div class="panel">
+    <h3 style="margin-top: 0;">✨ Existing Features</h3>
+    
+    {% if features %}
+    <div class="features-table">
+        {% for feature in features %}
+        <div class="feature-edit-item">
+            <form method="POST">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="feature_id" value="{{ feature.id }}">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <select name="phase_id" class="form-control">
+                            {% for phase in phases %}
+                            <option value="{{ phase.id }}" {% if phase.id == feature.phase_id %}selected{% endif %}>{{ phase.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <input type="text" name="title" class="form-control" value="{{ feature.title }}" required>
+                    </div>
+                    <div class="form-group">
+                        <select name="status" class="form-control">
+                            <option value="planned" {% if feature.status == 'planned' %}selected{% endif %}>Planned</option>
+                            <option value="in_progress" {% if feature.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="completed" {% if feature.status == 'completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select name="priority" class="form-control">
+                            <option value="low" {% if feature.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if feature.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if feature.priority == 'high' %}selected{% endif %}>High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 3;">
+                        <input type="text" name="description" class="form-control" value="{{ feature.description or '' }}" placeholder="Description">
+                    </div>
+                    <div class="form-group flex gap-2" style="align-items: flex-end;">
+                        <button type="submit" class="btn btn-secondary btn-sm">💾</button>
+                        <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" 
+                                onclick="return confirm('Delete this feature?');">🗑️</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">No features yet. Add one above!</p>
+    {% endif %}
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 120px;
+    margin-bottom: 0;
+}
+
+.feature-edit-item {
+    background: var(--bg-light);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.feature-edit-item:nth-child(even) {
+    background: var(--bg-card);
+}
+</style>
+{% endblock %}

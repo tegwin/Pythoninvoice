@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{% if product %}Edit Product{% else %}New Product{% endif %} - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if product %}✏️ Edit Product{% else %}➕ New Product/Service{% endif %}</h1>
+    <p class="page-subtitle">{% if product %}Update product information{% else %}Add a new product or service{% endif %}</p>
+</div>
+
+<form method="POST">
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Product Details</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="name">Name *</label>
+                <input type="text" id="name" name="name" class="form-control" value="{{ product.name if product else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="sku">SKU / Code</label>
+                <input type="text" id="sku" name="sku" class="form-control" value="{{ product.sku if product else '' }}" placeholder="Optional product code">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" placeholder="Product description">{{ product.description if product else '' }}</textarea>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="unit_price">Unit Price *</label>
+                <input type="number" id="unit_price" name="unit_price" class="form-control" 
+                       step="0.01" min="0" value="{{ product.unit_price if product else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="unit">Unit</label>
+                <input type="text" id="unit" name="unit" class="form-control" 
+                       value="{{ product.unit if product else 'unit' }}" placeholder="e.g., hour, unit, piece">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="is_service" id="is_service" {% if product and product.is_service %}checked{% endif %} onchange="toggleBillingTerm()">
+                    <span>This is a service (not a physical product)</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="taxable" {% if not product or product.taxable %}checked{% endif %}>
+                    <span>Taxable</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group" id="billing-term-group" style="{% if not product or not product.is_service %}display: none;{% endif %}">
+            <label class="form-label" for="billing_term">Billing Term</label>
+            <select id="billing_term" name="billing_term" class="form-control" style="max-width: 200px;">
+                <option value="">None (one-time)</option>
+                <option value="weekly" {% if product and product.billing_term == 'weekly' %}selected{% endif %}>Weekly</option>
+                <option value="monthly" {% if product and product.billing_term == 'monthly' %}selected{% endif %}>Monthly</option>
+                <option value="quarterly" {% if product and product.billing_term == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                <option value="biannually" {% if product and product.billing_term == 'biannually' %}selected{% endif %}>Bi-Annually (6 months)</option>
+                <option value="annually" {% if product and product.billing_term == 'annually' %}selected{% endif %}>Annually</option>
+            </select>
+            <small class="text-muted">For recurring services - used with recurring invoices</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="coa_id">Revenue Account (Chart of Accounts)</label>
+            <select id="coa_id" name="coa_id" class="form-control" style="max-width: 400px;">
+                <option value="">-- None --</option>
+                {% for account in coa_accounts %}
+                <option value="{{ account.id }}" {% if product and product.coa_id == account.id %}selected{% endif %}>
+                    {{ account.code }} - {{ account.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Assign to a revenue account for reporting. <a href="{{ url_for('chart_of_accounts') }}">Manage accounts →</a></small>
+        </div>
+        
+        {% if product %}
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="active" {% if product.active %}checked{% endif %}>
+                <span>Active (available for use in invoices)</span>
+            </label>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="flex gap-4">
+        <button type="submit" class="btn btn-primary">💾 {% if product %}Update{% else %}Create{% endif %} Product</button>
+        <a href="{{ url_for('products') }}" class="btn btn-secondary">Cancel</a>
+        {% if product %}
+        <form method="POST" action="{{ url_for('delete_product', product_id=product.id) }}" style="display: inline; margin-left: auto;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Deactivate this product?');">🗑️ Deactivate</button>
+        </form>
+        {% endif %}
+    </div>
+</form>
+
+<script>
+function toggleBillingTerm() {
+    const isService = document.getElementById('is_service').checked;
+    const billingTermGroup = document.getElementById('billing-term-group');
+    billingTermGroup.style.display = isService ? 'block' : 'none';
+    if (!isService) {
+        document.getElementById('billing_term').value = '';
+    }
+}
+</script>
+{% endblock %}

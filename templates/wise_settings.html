@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Wise Integration - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">💚 Wise Integration</h1>
+    <p class="page-subtitle">Receive payments via bank transfer with automatic matching</p>
+</div>
+
+<div class="panel mb-4">
+    <a href="{{ url_for('integrations') }}" class="btn btn-secondary">← Back to Integrations</a>
+</div>
+
+<!-- Status Banner -->
+{% if wise_settings.enabled and is_configured %}
+<div class="panel mb-4" style="background: linear-gradient(135deg, #9fe87011, #9fe87022); border-left: 4px solid #9fe870;">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">✅</span>
+        <div>
+            <strong style="color: #9fe870;">Wise is Active</strong>
+            <p class="text-muted" style="margin: 0;">
+                Mode: <strong>{% if wise_settings.live_mode %}🔴 Live{% else %}🟡 Sandbox{% endif %}</strong>
+                {% if wise_settings.profile_id %} | Profile: {{ wise_settings.profile_id }}{% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% elif wise_settings.enabled and not is_configured %}
+<div class="panel mb-4" style="background: var(--accent-red)22; border-left: 4px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-red);">Configuration Incomplete</strong>
+            <p class="text-muted" style="margin: 0;">Please add your Wise API token below.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<form method="POST">
+    <!-- Enable/Disable -->
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">🔌 Enable Wise</h3>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="enabled" value="1" 
+                       {% if wise_settings.enabled %}checked{% endif %}
+                       onchange="toggleSettings(this)">
+                <span>Enable Wise bank transfer payments</span>
+            </label>
+        </div>
+    </div>
+    
+    <div id="wise-settings" style="{% if not wise_settings.enabled %}opacity: 0.5; pointer-events: none;{% endif %}">
+        
+        <!-- API Credentials -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🔑 API Credentials</h3>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">
+                Get your API token from 
+                <a href="https://wise.com/settings/api-tokens" target="_blank" style="color: var(--accent-yellow);">
+                    Wise → Settings → API Tokens
+                </a>
+            </p>
+            
+            <!-- Mode Toggle -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label">Environment</label>
+                <div class="flex gap-4">
+                    <label class="form-check" style="padding: 1rem; background: var(--bg-dark); border-radius: 8px; flex: 1; {% if not wise_settings.live_mode %}border: 2px solid var(--accent-yellow);{% endif %}">
+                        <input type="radio" name="live_mode" value="0" {% if not wise_settings.live_mode %}checked{% endif %}>
+                        <span>
+                            <strong>🟡 Sandbox</strong>
+                            <small class="text-muted" style="display: block;">Test with sandbox account</small>
+                        </span>
+                    </label>
+                    <label class="form-check" style="padding: 1rem; background: var(--bg-dark); border-radius: 8px; flex: 1; {% if wise_settings.live_mode %}border: 2px solid #9fe870;{% endif %}">
+                        <input type="radio" name="live_mode" value="1" {% if wise_settings.live_mode %}checked{% endif %}>
+                        <span>
+                            <strong>💚 Live</strong>
+                            <small class="text-muted" style="display: block;">Real Wise account</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Sandbox Token -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="margin-top: 0; color: var(--accent-yellow);">🟡 Sandbox API Token</h4>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <input type="password" name="sandbox_api_token" class="form-control" 
+                           value="{{ wise_settings.sandbox_api_token or '' }}"
+                           placeholder="Your sandbox API token...">
+                </div>
+            </div>
+            
+            <!-- Live Token -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 3px solid #9fe870;">
+                <h4 style="margin-top: 0; color: #9fe870;">💚 Live API Token</h4>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <input type="password" name="live_api_token" class="form-control" 
+                           value="{{ wise_settings.live_api_token or '' }}"
+                           placeholder="Your live API token...">
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label class="form-label">Profile ID (Optional)</label>
+                <input type="text" name="profile_id" class="form-control" 
+                       value="{{ wise_settings.profile_id or '' }}"
+                       placeholder="Your Wise profile ID">
+                <small class="text-muted">Business or personal profile ID for API calls</small>
+            </div>
+        </div>
+        
+        <!-- Bank Account Details -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🏦 Bank Account Details</h3>
+            <p class="text-muted" style="margin-bottom: 1rem;">
+                Enter your Wise local bank details to display on invoices. Customers can pay to these accounts directly.
+            </p>
+            
+            <!-- GBP Details -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="margin-top: 0;">🇬🇧 GBP Account (UK)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" name="gbp_account_name" class="form-control" 
+                               value="{{ gbp_details.account_name if gbp_details else '' }}"
+                               placeholder="Your Business Name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sort Code</label>
+                        <input type="text" name="gbp_sort_code" class="form-control" 
+                               value="{{ gbp_details.sort_code if gbp_details else '' }}"
+                               placeholder="XX-XX-XX">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Account Number</label>
+                    <input type="text" name="gbp_account_number" class="form-control" 
+                           value="{{ gbp_details.account_number if gbp_details else '' }}"
+                           placeholder="XXXXXXXX">
+                </div>
+            </div>
+            
+            <!-- EUR Details -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="margin-top: 0;">🇪🇺 EUR Account</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" name="eur_account_name" class="form-control" 
+                               value="{{ eur_details.account_name if eur_details else '' }}"
+                               placeholder="Your Business Name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">BIC</label>
+                        <input type="text" name="eur_bic" class="form-control" 
+                               value="{{ eur_details.bic if eur_details else '' }}"
+                               placeholder="TRWIBEB1XXX">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">IBAN</label>
+                    <input type="text" name="eur_iban" class="form-control" 
+                           value="{{ eur_details.iban if eur_details else '' }}"
+                           placeholder="BE00 0000 0000 0000">
+                </div>
+            </div>
+            
+            <!-- USD Details -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px;">
+                <h4 style="margin-top: 0;">🇺🇸 USD Account</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Account Name</label>
+                        <input type="text" name="usd_account_name" class="form-control" 
+                               value="{{ usd_details.account_name if usd_details else '' }}"
+                               placeholder="Your Business Name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Account Type</label>
+                        <select name="usd_account_type" class="form-control">
+                            <option value="Checking" {% if usd_details and usd_details.account_type == 'Checking' %}selected{% endif %}>Checking</option>
+                            <option value="Savings" {% if usd_details and usd_details.account_type == 'Savings' %}selected{% endif %}>Savings</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Routing Number (ACH)</label>
+                        <input type="text" name="usd_routing_number" class="form-control" 
+                               value="{{ usd_details.routing_number if usd_details else '' }}"
+                               placeholder="XXXXXXXXX">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Account Number</label>
+                        <input type="text" name="usd_account_number" class="form-control" 
+                               value="{{ usd_details.account_number if usd_details else '' }}"
+                               placeholder="XXXXXXXXXXXX">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Webhook Configuration -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🔔 Webhook Configuration</h3>
+            <p class="text-muted" style="margin-bottom: 1rem;">
+                Set up webhooks in your Wise account to automatically match incoming payments.
+            </p>
+            
+            <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <label class="form-label" style="margin-bottom: 0.5rem;">Webhook URL</label>
+                <div class="flex gap-2" style="align-items: center;">
+                    <code style="flex: 1; padding: 0.75rem; background: var(--bg-medium); border-radius: 6px; word-break: break-all;">
+                        {{ request.host_url }}webhook/wise
+                    </code>
+                    <button type="button" class="btn btn-secondary" onclick="copyToClipboard('{{ request.host_url }}webhook/wise')">📋</button>
+                </div>
+            </div>
+            
+            <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <strong>Recommended Webhook Events:</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; color: var(--text-secondary);">
+                    <li>transfers#state-change</li>
+                    <li>balances#credit</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Display Options -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🎨 Display Options</h3>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_email" value="1" 
+                           {% if wise_settings.include_in_email != 0 %}checked{% endif %}>
+                    <span>Include Wise bank details in invoice emails</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_invoice_pdf" value="1" 
+                           {% if wise_settings.include_in_invoice_pdf != 0 %}checked{% endif %}>
+                    <span>Include Wise bank details in invoice PDF</span>
+                </label>
+            </div>
+        </div>
+        
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-lg">💾 Save Wise Settings</button>
+</form>
+
+<!-- How It Works -->
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 How Wise Payments Work</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">1️⃣</div>
+            <strong>Send Invoice</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Invoice includes your Wise bank details
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">2️⃣</div>
+            <strong>Customer Pays</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Customer sends bank transfer with invoice reference
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">3️⃣</div>
+            <strong>Webhook Notification</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Wise sends balance credit notification
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">4️⃣</div>
+            <strong>Auto-Match</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Payment matched to invoice by reference
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Unmatched Credits -->
+{% if unmatched_credits %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">❓ Unmatched Payments</h3>
+    <p class="text-muted">These payments were received but couldn't be automatically matched to an invoice.</p>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for credit in unmatched_credits %}
+            <tr>
+                <td style="font-size: 0.85rem;">{{ credit.created_at.strftime('%Y-%m-%d') if credit.created_at else 'N/A' }}</td>
+                <td><code>{{ credit.reference or 'No reference' }}</code></td>
+                <td><strong>{{ "%.2f"|format(credit.amount or 0) }}</strong></td>
+                <td>{{ credit.currency }}</td>
+                <td>
+                    <a href="{{ url_for('match_wise_credit', credit_id=credit.id) }}" class="btn btn-secondary btn-sm">Match to Invoice</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Webhook Logs -->
+{% if webhook_logs %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📜 Recent Webhook Events</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Invoice</th>
+                <th>Status</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in webhook_logs %}
+            <tr>
+                <td style="font-size: 0.85rem;">{{ log.received_at.strftime('%Y-%m-%d %H:%M') if log.received_at else 'N/A' }}</td>
+                <td><code style="font-size: 0.8rem;">{{ log.event_type }}</code></td>
+                <td>
+                    {% if log.invoice_id %}
+                    <a href="{{ url_for('view_invoice', invoice_id=log.invoice_id) }}">#{{ log.invoice_id }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if log.status == 'success' %}
+                    <span class="badge badge-paid">Success</span>
+                    {% else %}
+                    <span class="badge badge-overdue">{{ log.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.85rem;">{{ log.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<script>
+function toggleSettings(checkbox) {
+    const settings = document.getElementById('wise-settings');
+    if (checkbox.checked) {
+        settings.style.opacity = '1';
+        settings.style.pointerEvents = 'auto';
+    } else {
+        settings.style.opacity = '0.5';
+        settings.style.pointerEvents = 'none';
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

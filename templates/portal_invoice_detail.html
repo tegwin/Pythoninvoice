@@ -1,0 +1,268 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - Customer Portal{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title">Invoice {{ invoice.invoice_number }}</h1>
+        <p class="page-subtitle">From {{ business_info.company_name }}</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('portal.portal_invoices') }}" class="btn btn-secondary">← Back to Invoices</a>
+        <a href="{{ url_for('portal.portal_download_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">📥 Download PDF</a>
+    </div>
+</div>
+
+{% set balance = invoice.total - invoice.amount_paid %}
+{% set is_overdue = invoice.status not in ['paid', 'cancelled'] and invoice.due_date and invoice.due_date < now.date() %}
+
+<!-- Status Banner -->
+{% if invoice.status == 'paid' %}
+<div class="alert alert-success">
+    <strong>✅ Paid in Full</strong> - Thank you for your payment!
+</div>
+{% elif is_overdue %}
+<div class="alert alert-error">
+    <strong>⚠️ Overdue</strong> - This invoice was due on {{ invoice.due_date.strftime('%d %b %Y') if invoice.due_date else '' }}. Please arrange payment as soon as possible.
+</div>
+{% elif invoice.status == 'partial' %}
+<div class="alert alert-warning">
+    <strong>💳 Partially Paid</strong> - Outstanding balance: <strong>{{ currency_symbol }}{{ "%.2f"|format(balance) }}</strong>
+</div>
+{% elif invoice.status == 'cancelled' %}
+<div class="alert" style="background: rgba(100,100,100,0.2); border-color: #666;">
+    <strong>Cancelled</strong> - This invoice has been cancelled.
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    <!-- Main Invoice Details -->
+    <div>
+        <div class="panel">
+            <h2 class="panel-title">Invoice Details</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div>
+                    <div style="color: var(--text-secondary); font-size: 0.85rem;">Invoice Date</div>
+                    <div>{{ invoice.issue_date.strftime('%d %B %Y') if invoice.issue_date else 'N/A' }}</div>
+                </div>
+                <div>
+                    <div style="color: var(--text-secondary); font-size: 0.85rem;">Due Date</div>
+                    <div style="{% if is_overdue %}color: var(--accent-red); font-weight: 500;{% endif %}">
+                        {{ invoice.due_date.strftime('%d %B %Y') if invoice.due_date else 'N/A' }}
+                        {% if is_overdue %}(Overdue){% endif %}
+                    </div>
+                </div>
+                {% if invoice.po_number %}
+                <div>
+                    <div style="color: var(--text-secondary); font-size: 0.85rem;">PO Number</div>
+                    <div>{{ invoice.po_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Line Items -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Description</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice['items'] %}
+                        <tr>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.unit_price) }}</td>
+                            <td>{{ currency_symbol }}{{ "%.2f"|format(item.quantity * item.unit_price) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Totals -->
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <div style="display: inline-block; text-align: left; min-width: 250px;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--text-secondary);">Subtotal</span>
+                        <span>{{ currency_symbol }}{{ "%.2f"|format(invoice.subtotal or invoice.total) }}</span>
+                    </div>
+                    {% if invoice.tax_amount and invoice.tax_amount > 0 %}
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--text-secondary);">Tax ({{ invoice.tax_rate or 0 }}%)</span>
+                        <span>{{ currency_symbol }}{{ "%.2f"|format(invoice.tax_amount) }}</span>
+                    </div>
+                    {% endif %}
+                    <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 1.1rem; font-weight: 600;">
+                        <span>Total</span>
+                        <span>{{ currency_symbol }}{{ "%.2f"|format(invoice.total) }}</span>
+                    </div>
+                    {% if invoice.amount_paid > 0 %}
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; color: var(--accent-green);">
+                        <span>Paid</span>
+                        <span>-{{ currency_symbol }}{{ "%.2f"|format(invoice.amount_paid) }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 1.25rem; font-weight: 700; color: var(--accent-yellow);">
+                        <span>Balance Due</span>
+                        <span>{{ currency_symbol }}{{ "%.2f"|format(balance) }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment History -->
+        {% if invoice['payments'] %}
+        <div class="panel">
+            <h2 class="panel-title">💳 Payment History</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Method</th>
+                            <th>Reference</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in invoice['payments'] %}
+                        <tr>
+                            <td>{{ payment.payment_date.strftime('%d %b %Y') if payment.payment_date else '' }}</td>
+                            <td>{{ payment.payment_method or 'N/A' }}</td>
+                            <td>{{ payment.reference or '-' }}</td>
+                            <td style="color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(payment.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notes -->
+        {% if invoice.notes %}
+        <div class="panel">
+            <h2 class="panel-title">📝 Notes</h2>
+            <p style="color: var(--text-secondary);">{{ invoice.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Payment Sidebar -->
+    <div>
+        {% if invoice.status not in ['paid', 'cancelled'] %}
+        <div class="panel" style="position: sticky; top: 2rem; border-color: var(--accent-green);">
+            <h2 class="panel-title" style="color: var(--accent-green);">💳 Pay Now</h2>
+            
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">Amount Due</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--accent-yellow);">{{ currency_symbol }}{{ "%.2f"|format(balance) }}</div>
+            </div>
+            
+            {% if payment_options.stripe %}
+            <div style="margin-bottom: 1rem;">
+                {% if payment_options.stripe == 'available' %}
+                <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="method" value="stripe">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        💳 Pay with Card (Stripe)
+                    </button>
+                </form>
+                {% else %}
+                <a href="{{ payment_options.stripe }}" class="btn btn-primary" style="width: 100%; display: block; text-align: center;">
+                    💳 Pay with Card (Stripe)
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if payment_options.gocardless %}
+            <div style="margin-bottom: 1rem;">
+                {% if payment_options.gocardless == 'mandate_active' %}
+                <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="method" value="gocardless">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        🏦 Pay by Direct Debit
+                    </button>
+                </form>
+                {% elif payment_options.gocardless == 'setup_required' %}
+                <a href="{{ url_for('portal.portal_setup_gocardless', invoice_id=invoice.id) }}" class="btn btn-secondary" style="width: 100%; display: block; text-align: center;">
+                    🏦 Setup Direct Debit
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if payment_options.sumup %}
+            <div style="margin-bottom: 1rem;">
+                {% if payment_options.sumup == 'available' %}
+                <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="method" value="sumup">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        💳 Pay with SumUp
+                    </button>
+                </form>
+                {% else %}
+                <a href="{{ payment_options.sumup }}" class="btn btn-secondary" style="width: 100%; display: block; text-align: center;">
+                    💳 Pay with SumUp
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if not payment_options.stripe and not payment_options.gocardless and not payment_options.sumup %}
+            <p style="color: var(--text-secondary); text-align: center;">
+                Please contact {{ business_info.company_name }} for payment options.
+            </p>
+            {% endif %}
+            
+            <hr style="border-color: var(--border); margin: 1.5rem 0;">
+            
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                <p><strong>Bank Transfer:</strong></p>
+                <p>Contact {{ business_info.company_name }} for bank details.</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="panel">
+            <h2 class="panel-title">Invoice Status</h2>
+            {% if invoice.status == 'paid' %}
+            <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 3rem;">✅</div>
+                <div style="font-weight: 600; color: var(--accent-green);">Paid in Full</div>
+                {% if invoice.paid_at %}
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                    {{ invoice.paid_at.strftime('%d %B %Y') if invoice.paid_at else '' }}
+                </div>
+                {% endif %}
+            </div>
+            {% elif invoice.status == 'cancelled' %}
+            <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 3rem;">❌</div>
+                <div style="font-weight: 600; color: var(--text-secondary);">Cancelled</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Business Details -->
+        <div class="panel">
+            <h2 class="panel-title">📞 Questions?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Contact {{ business_info.company_name }}:</p>
+            {% if business_info.email %}
+            <p><a href="mailto:{{ business_info.email }}" style="color: var(--accent-blue);">{{ business_info.email }}</a></p>
+            {% endif %}
+            {% if business_info.phone %}
+            <p>{{ business_info.phone }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

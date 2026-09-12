@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Pay Bill - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">💰 Record Payment</h1>
+</div>
+
+{% set balance = (bill.total or 0) - (bill.amount_paid or 0) %}
+
+<div class="panel mb-4" style="background: var(--bg-dark);">
+    <h3 style="margin-top: 0;">Bill: {{ bill.bill_number }}</h3>
+    <p class="text-muted">
+        {{ bill.supplier_name or 'Unknown Supplier' }}
+        {% if bill.reference %} &bull; Ref: {{ bill.reference }}{% endif %}
+    </p>
+    <div class="form-row">
+        <div>
+            <span class="text-muted">Total:</span>
+            <strong>{{ currency_symbol }}{{ "%.2f"|format(bill.total or 0) }}</strong>
+        </div>
+        <div>
+            <span class="text-muted">Paid:</span>
+            <strong>{{ currency_symbol }}{{ "%.2f"|format(bill.amount_paid or 0) }}</strong>
+        </div>
+        <div>
+            <span class="text-muted">Balance:</span>
+            <strong class="text-red">{{ currency_symbol }}{{ "%.2f"|format(balance) }}</strong>
+        </div>
+    </div>
+</div>
+
+<form method="POST" class="panel">
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="amount">Payment Amount *</label>
+            <input type="number" id="amount" name="amount" class="form-control" required
+                   value="{{ "%.2f"|format(balance) }}"
+                   step="0.01" min="0.01" max="{{ balance }}">
+            <small class="text-muted">Maximum: {{ currency_symbol }}{{ "%.2f"|format(balance) }}</small>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="payment_date">Payment Date *</label>
+            <input type="date" id="payment_date" name="payment_date" class="form-control" required
+                   value="{{ today }}">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="payment_method">Payment Method</label>
+            <select id="payment_method" name="payment_method" class="form-control">
+                <option value="">-- Select Method --</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Debit Card">Debit Card</option>
+                <option value="Direct Debit">Direct Debit</option>
+                <option value="Cash">Cash</option>
+                <option value="Cheque">Cheque</option>
+                <option value="PayPal">PayPal</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="reference">Reference</label>
+            <input type="text" id="reference" name="reference" class="form-control"
+                   placeholder="Transaction ID, cheque number, etc.">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="2"
+                  placeholder="Payment notes..."></textarea>
+    </div>
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">💰 Record Payment</button>
+        <a href="{{ url_for('view_bill', bill_id=bill.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

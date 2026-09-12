@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Income Tax Summary - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">💰 Income Tax Summary</h1>
+        <p class="page-subtitle">Self-Employment Tax Summary</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reports') }}" class="btn btn-secondary">← Back to Reports</a>
+        {% if report %}
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tax Year Selector -->
+<div class="panel mb-4">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label>Tax Year Start (e.g., 6 April 2025)</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label>Tax Year End (e.g., 5 April 2026)</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+    </form>
+</div>
+
+{% if report %}
+<!-- CRITICAL WARNING -->
+<div class="panel mb-4" style="background: var(--accent-red)22; border: 2px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: flex-start;">
+        <span style="font-size: 2.5rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-red); font-size: 1.2rem;">TAX REPORT - MUST BE VERIFIED BY ACCOUNTANT</strong>
+            <p style="margin: 0.5rem 0 0 0; color: var(--accent-red);">
+                This summary is provided as a guide only for self-assessment tax returns. You <strong>MUST</strong> 
+                verify all figures with a qualified accountant or tax advisor before submitting to HMRC. 
+                The classification of expenses and income may vary based on your specific circumstances.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Report Header -->
+<div class="panel mb-4" style="text-align: center;">
+    <h2 style="margin: 0;">Self-Employment Income Tax Summary</h2>
+    <p class="text-muted" style="margin: 0.5rem 0;">
+        Tax Year: {{ report.tax_year.start_date }} to {{ report.tax_year.end_date }}
+    </p>
+    <p class="text-muted" style="margin: 0; font-size: 0.85rem;">
+        Generated: {{ report.generated_at[:19] }}
+    </p>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    <div>
+        <!-- Turnover -->
+        <div class="panel mb-4" style="border-left: 4px solid var(--accent-green);">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-green);">Turnover (Box 15)</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Gross Income from Invoices</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.turnover.gross_income) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Less: Credit Notes</td>
+                        <td class="text-right" style="color: var(--accent-red);">({{ currency_symbol }}{{ "%.2f"|format(report.turnover.less_credit_notes) }})</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-size: 1.2rem; font-weight: bold;">
+                        <td>Net Turnover</td>
+                        <td class="text-right" style="color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(report.turnover.net_turnover) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">{{ report.turnover.note }}</p>
+        </div>
+        
+        <!-- Expenses -->
+        <div class="panel mb-4" style="border-left: 4px solid var(--accent-red);">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-red);">Allowable Expenses</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Bills & Supplier Invoices</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.allowable_expenses.bills_and_supplies) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Other Business Expenses</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.allowable_expenses.other_expenses) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-size: 1.2rem; font-weight: bold;">
+                        <td>Total Allowable Expenses</td>
+                        <td class="text-right" style="color: var(--accent-red);">{{ currency_symbol }}{{ "%.2f"|format(report.allowable_expenses.total_allowable_expenses) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">{{ report.allowable_expenses.note }}</p>
+        </div>
+        
+        <!-- Expense Breakdown -->
+        {% if report.expense_categories %}
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">Expense Breakdown by Category</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in report.expense_categories %}
+                    <tr>
+                        <td>{{ cat.category }}</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(cat.amount or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div>
+        <!-- Net Profit -->
+        <div class="panel mb-4" style="background: {% if report.profit.net_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %}22;">
+            <h3 class="section-title" style="margin-top: 0;">Taxable Profit</h3>
+            <div style="text-align: center;">
+                <p style="font-size: 2.5rem; font-weight: bold; margin: 0; color: {% if report.profit.net_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+                    {{ currency_symbol }}{{ "%.2f"|format(report.profit.net_profit) }}
+                </p>
+            </div>
+            <p class="text-muted" style="text-align: center; font-size: 0.85rem; margin-top: 0.5rem;">{{ report.profit.note }}</p>
+        </div>
+        
+        <!-- Reminders -->
+        <div class="panel" style="border-left: 4px solid var(--accent-yellow);">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-yellow);">Important Reminders</h3>
+            <ul style="font-size: 0.9rem; margin: 0; padding-left: 1.25rem;">
+                {% for reminder in report.reminders %}
+                <li style="margin-bottom: 0.5rem;">{{ reminder }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Accountant Verification -->
+<div class="panel mt-4" style="text-align: center; background: var(--accent-purple)22; border: 2px dashed var(--accent-purple);">
+    <h3 style="margin: 0; color: var(--accent-purple);">📋 Accountant Verification Required</h3>
+    <p style="margin: 1rem 0;">
+        Before submitting your self-assessment tax return, please have these figures reviewed by a qualified accountant.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <div style="padding: 0.5rem 1rem; background: var(--bg-dark); border-radius: 4px;">
+            <strong>Verified by:</strong> _______________________
+        </div>
+        <div style="padding: 0.5rem 1rem; background: var(--bg-dark); border-radius: 4px;">
+            <strong>Date:</strong> _______________________
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="panel">
+    <div class="empty-state">
+        <p>Select a tax year to generate the summary</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{% if customer %}Edit Customer{% else %}New Customer{% endif %} - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if customer %}✏️ Edit Customer{% else %}➕ New Customer{% endif %}</h1>
+    <p class="page-subtitle">{% if customer %}Update customer information{% else %}Add a new customer{% endif %}</p>
+</div>
+
+<form method="POST">
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Contact Information</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="name">Name *</label>
+                <input type="text" id="name" name="name" class="form-control" value="{{ customer.name if customer else '' }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control" value="{{ customer.email if customer else '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" class="form-control" value="{{ customer.phone if customer else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="tax_number">Tax Number / VAT ID</label>
+                <input type="text" id="tax_number" name="tax_number" class="form-control" value="{{ customer.tax_number if customer else '' }}">
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Address</h3>
+        
+        <div class="form-group">
+            <label class="form-label" for="address_line1">Address Line 1</label>
+            <input type="text" id="address_line1" name="address_line1" class="form-control" value="{{ customer.address_line1 if customer else '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="address_line2">Address Line 2</label>
+            <input type="text" id="address_line2" name="address_line2" class="form-control" value="{{ customer.address_line2 if customer else '' }}">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="city">City</label>
+                <input type="text" id="city" name="city" class="form-control" value="{{ customer.city if customer else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="state">State / Province</label>
+                <input type="text" id="state" name="state" class="form-control" value="{{ customer.state if customer else '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="postal_code">Postal Code</label>
+                <input type="text" id="postal_code" name="postal_code" class="form-control" value="{{ customer.postal_code if customer else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="country">Country</label>
+                <select id="country" name="country" class="form-control">
+                    <option value="">-- Select Country --</option>
+                    <option value="United Kingdom" {% if customer and customer.country == 'United Kingdom' %}selected{% endif %}>United Kingdom</option>
+                    <option value="United States" {% if customer and customer.country == 'United States' %}selected{% endif %}>United States</option>
+                    <option value="South Africa" {% if customer and customer.country == 'South Africa' %}selected{% endif %}>South Africa</option>
+                    <option value="Canada" {% if customer and customer.country == 'Canada' %}selected{% endif %}>Canada</option>
+                    <option value="Australia" {% if customer and customer.country == 'Australia' %}selected{% endif %}>Australia</option>
+                    <option value="New Zealand" {% if customer and customer.country == 'New Zealand' %}selected{% endif %}>New Zealand</option>
+                    <option value="Ireland" {% if customer and customer.country == 'Ireland' %}selected{% endif %}>Ireland</option>
+                    <option value="Germany" {% if customer and customer.country == 'Germany' %}selected{% endif %}>Germany</option>
+                    <option value="France" {% if customer and customer.country == 'France' %}selected{% endif %}>France</option>
+                    <option value="Netherlands" {% if customer and customer.country == 'Netherlands' %}selected{% endif %}>Netherlands</option>
+                    <option value="Belgium" {% if customer and customer.country == 'Belgium' %}selected{% endif %}>Belgium</option>
+                    <option value="Switzerland" {% if customer and customer.country == 'Switzerland' %}selected{% endif %}>Switzerland</option>
+                    <option value="Austria" {% if customer and customer.country == 'Austria' %}selected{% endif %}>Austria</option>
+                    <option value="Spain" {% if customer and customer.country == 'Spain' %}selected{% endif %}>Spain</option>
+                    <option value="Portugal" {% if customer and customer.country == 'Portugal' %}selected{% endif %}>Portugal</option>
+                    <option value="Italy" {% if customer and customer.country == 'Italy' %}selected{% endif %}>Italy</option>
+                    <option value="Sweden" {% if customer and customer.country == 'Sweden' %}selected{% endif %}>Sweden</option>
+                    <option value="Norway" {% if customer and customer.country == 'Norway' %}selected{% endif %}>Norway</option>
+                    <option value="Denmark" {% if customer and customer.country == 'Denmark' %}selected{% endif %}>Denmark</option>
+                    <option value="Finland" {% if customer and customer.country == 'Finland' %}selected{% endif %}>Finland</option>
+                    <option value="Poland" {% if customer and customer.country == 'Poland' %}selected{% endif %}>Poland</option>
+                    <option value="India" {% if customer and customer.country == 'India' %}selected{% endif %}>India</option>
+                    <option value="Japan" {% if customer and customer.country == 'Japan' %}selected{% endif %}>Japan</option>
+                    <option value="China" {% if customer and customer.country == 'China' %}selected{% endif %}>China</option>
+                    <option value="Singapore" {% if customer and customer.country == 'Singapore' %}selected{% endif %}>Singapore</option>
+                    <option value="Hong Kong" {% if customer and customer.country == 'Hong Kong' %}selected{% endif %}>Hong Kong</option>
+                    <option value="United Arab Emirates" {% if customer and customer.country == 'United Arab Emirates' %}selected{% endif %}>United Arab Emirates</option>
+                    <option value="Brazil" {% if customer and customer.country == 'Brazil' %}selected{% endif %}>Brazil</option>
+                    <option value="Mexico" {% if customer and customer.country == 'Mexico' %}selected{% endif %}>Mexico</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Custom Settings (Override Defaults)</h3>
+        <p class="text-muted" style="margin-bottom: 1rem;">Leave empty to use your default settings.</p>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="custom_tax_rate">Custom Tax Rate</label>
+                <select id="custom_tax_rate" name="custom_tax_rate" class="form-control">
+                    <option value="">Use Default</option>
+                    {% set tax_rates = (g.tax_rates or '0,5,10,15,20,25').split(',') %}
+                    {% for rate in tax_rates %}
+                    <option value="{{ rate|trim }}" {% if customer and customer.custom_tax_rate is not none and (customer.custom_tax_rate|float|int|string) == (rate|trim) %}selected{% endif %}>
+                        {% if rate|trim == '0' %}No Tax (0%){% else %}{{ rate|trim }}%{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="custom_currency">Custom Currency</label>
+                <select id="custom_currency" name="custom_currency" class="form-control">
+                    <option value="">Use Default</option>
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}" {% if customer and customer.custom_currency == code %}selected{% endif %}>
+                        {{ info.symbol }} {{ code }} - {{ info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">📧 Email Preferences</h3>
+        <p class="text-muted" style="margin-bottom: 1rem;">Control which automatic emails this customer receives.</p>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="email_invoice_created" value="1" 
+                       {% if not customer or customer.email_invoice_created != 0 %}checked{% endif %}>
+                <span>Send email when invoice is created/sent</span>
+            </label>
+            <small class="text-muted" style="display: block; margin-left: 1.75rem;">Customer will receive the invoice PDF by email</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="email_invoice_reminder" value="1" 
+                       {% if not customer or customer.email_invoice_reminder != 0 %}checked{% endif %}>
+                <span>Send payment reminder emails</span>
+            </label>
+            <small class="text-muted" style="display: block; margin-left: 1.75rem;">Automatic reminders for overdue invoices</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="email_payment_received" value="1" 
+                       {% if not customer or customer.email_payment_received != 0 %}checked{% endif %}>
+                <span>Send payment confirmation emails</span>
+            </label>
+            <small class="text-muted" style="display: block; margin-left: 1.75rem;">Thank you email when payment is received</small>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Notes</h3>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Internal Notes</label>
+            <textarea id="notes" name="notes" class="form-control" placeholder="Notes about this customer (not shown on invoices)">{{ customer.notes if customer else '' }}</textarea>
+        </div>
+    </div>
+    
+    <div class="flex gap-4">
+        <button type="submit" class="btn btn-primary">💾 {% if customer %}Update{% else %}Create{% endif %} Customer</button>
+        <a href="{{ url_for('customers') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

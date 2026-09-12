@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Match Payment - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Match Wise Payment</h1>
+    <p class="page-subtitle">Match this payment to an invoice</p>
+</div>
+
+<div class="panel mb-4">
+    <a href="{{ url_for('wise_settings') }}" class="btn btn-secondary">Back to Wise Settings</a>
+</div>
+
+<div class="panel mb-4" style="background: linear-gradient(135deg, #9fe87011, #9fe87022); border-left: 4px solid #9fe870;">
+    <h3 class="section-title" style="margin-top: 0;">Payment Details</h3>
+    
+    <div class="form-row">
+        <div>
+            <span class="text-muted">Amount</span>
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-green);">
+                {{ credit.currency }} {{ "%.2f"|format(credit.amount or 0) }}
+            </div>
+        </div>
+        <div>
+            <span class="text-muted">Reference</span>
+            <div><code>{{ credit.reference or 'No reference' }}</code></div>
+        </div>
+        <div>
+            <span class="text-muted">Date</span>
+            <div>{{ credit.created_at.strftime('%Y-%m-%d') if credit.created_at else 'N/A' }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Select Invoice to Match</h3>
+    
+    {% if invoices %}
+    <form method="POST">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;"></th>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th>Amount Due</th>
+                    <th>Currency</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                {% set amount_due = (invoice.total or 0) - (invoice.amount_paid or 0) %}
+                <tr>
+                    <td>
+                        <input type="radio" name="invoice_id" value="{{ invoice.id }}">
+                    </td>
+                    <td><strong>{{ invoice.invoice_number }}</strong></td>
+                    <td>{{ invoice.customer_name or 'No customer' }}</td>
+                    <td><strong>{{ "%.2f"|format(amount_due) }}</strong></td>
+                    <td>{{ invoice.currency }}</td>
+                    <td>
+                        <span class="badge badge-{{ invoice.status }}">{{ invoice.status }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Match Payment to Invoice</button>
+            <a href="{{ url_for('wise_settings') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    {% else %}
+    <p class="text-muted">No unpaid invoices found.</p>
+    <a href="{{ url_for('wise_settings') }}" class="btn btn-secondary">Back</a>
+    {% endif %}
+</div>
+{% endblock %}

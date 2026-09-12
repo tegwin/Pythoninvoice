@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Balance Sheet - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📋 Balance Sheet</h1>
+        <p class="page-subtitle">Statement of Financial Position</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reports') }}" class="btn btn-secondary">← Back to Reports</a>
+        {% if report %}
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Date Selector -->
+<div class="panel mb-4">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label>As of Date</label>
+            <input type="date" name="as_of_date" class="form-control" value="{{ as_of_date or '' }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+    </form>
+</div>
+
+{% if report %}
+<!-- Disclaimer -->
+<div class="panel mb-4" style="background: var(--accent-yellow)22; border-left: 4px solid var(--accent-yellow);">
+    <strong style="color: var(--accent-yellow);">⚠️ Disclaimer</strong>
+    <p class="text-muted" style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">{{ report.disclaimer }}</p>
+</div>
+
+<!-- Report Header -->
+<div class="panel mb-4" style="text-align: center;">
+    <h2 style="margin: 0;">Balance Sheet</h2>
+    <p class="text-muted" style="margin: 0.5rem 0;">As of {{ report.as_of_date }}</p>
+    <p class="text-muted" style="margin: 0; font-size: 0.85rem;">Generated: {{ report.generated_at[:19] }}</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <!-- Assets -->
+    <div class="panel" style="border-left: 4px solid var(--accent-green);">
+        <h3 class="section-title" style="margin-top: 0; color: var(--accent-green);">Assets</h3>
+        
+        <h4 style="color: var(--text-secondary); margin: 1rem 0 0.5rem 0;">Current Assets</h4>
+        <table class="data-table">
+            <tbody>
+                <tr>
+                    <td>Accounts Receivable</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.assets.current_assets.accounts_receivable) }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="text-muted" style="font-size: 0.85rem;">{{ report.assets.current_assets.outstanding_invoices }} outstanding invoices</p>
+        
+        {% if report.assets.current_assets.aging %}
+        <h5 style="margin: 1rem 0 0.5rem 0;">Aging Analysis</h5>
+        <table class="data-table" style="font-size: 0.9rem;">
+            <tbody>
+                {% for bucket in report.assets.current_assets.aging %}
+                <tr>
+                    <td>{{ bucket.aging_bucket }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(bucket.amount or 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        
+        <hr>
+        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold;">
+            <span>Total Assets</span>
+            <span style="color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(report.assets.total_assets) }}</span>
+        </div>
+        
+        <p class="text-muted" style="font-size: 0.8rem; margin-top: 1rem;">
+            {{ report.assets.note }}
+        </p>
+    </div>
+    
+    <!-- Liabilities & Equity -->
+    <div>
+        <!-- Liabilities -->
+        <div class="panel mb-4" style="border-left: 4px solid var(--accent-red);">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-red);">Liabilities</h3>
+            
+            <h4 style="color: var(--text-secondary); margin: 1rem 0 0.5rem 0;">Current Liabilities</h4>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Accounts Payable</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.liabilities.current_liabilities.accounts_payable) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Credit Notes Outstanding</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.liabilities.current_liabilities.credit_notes_outstanding) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Estimated Tax Liability</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.liabilities.current_liabilities.estimated_tax_liability) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <hr>
+            <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold;">
+                <span>Total Liabilities</span>
+                <span style="color: var(--accent-red);">{{ currency_symbol }}{{ "%.2f"|format(report.liabilities.total_liabilities) }}</span>
+            </div>
+        </div>
+        
+        <!-- Equity -->
+        <div class="panel" style="border-left: 4px solid var(--accent-blue);">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-blue);">Equity</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Retained Earnings</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.equity.retained_earnings) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <hr>
+            <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold;">
+                <span>Total Equity</span>
+                <span style="color: var(--accent-blue);">{{ currency_symbol }}{{ "%.2f"|format(report.equity.total_equity) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Balance Check -->
+<div class="panel mt-4" style="text-align: center; {% if report.summary.balance_check == 0 %}background: var(--accent-green)22;{% else %}background: var(--accent-red)22;{% endif %}">
+    <h3 style="margin: 0;">Balance Check</h3>
+    <p style="margin: 0.5rem 0;">
+        Assets ({{ currency_symbol }}{{ "%.2f"|format(report.summary.total_assets) }}) - 
+        Liabilities ({{ currency_symbol }}{{ "%.2f"|format(report.summary.total_liabilities) }}) - 
+        Equity ({{ currency_symbol }}{{ "%.2f"|format(report.summary.total_equity) }}) = 
+        <strong>{{ currency_symbol }}{{ "%.2f"|format(report.summary.balance_check) }}</strong>
+    </p>
+    {% if report.summary.balance_check == 0 %}
+    <span class="badge badge-paid">✓ Balanced</span>
+    {% else %}
+    <span class="badge badge-overdue">⚠ Out of Balance</span>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="panel">
+    <div class="empty-state">
+        <p>Select a date to generate the balance sheet</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}GoCardless Integration - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏦 GoCardless Integration</h1>
+    <p class="page-subtitle">Collect payments via Direct Debit</p>
+</div>
+
+<div class="panel mb-4">
+    <a href="{{ url_for('integrations') }}" class="btn btn-secondary">← Back to Integrations</a>
+</div>
+
+<!-- Status Banner -->
+{% if gc_settings.enabled and is_configured %}
+<div class="panel mb-4" style="background: linear-gradient(135deg, #00b3a422, #00b3a411); border-left: 4px solid #00b3a4;">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">✅</span>
+        <div>
+            <strong style="color: #00b3a4;">GoCardless is Active</strong>
+            <p class="text-muted" style="margin: 0;">
+                Mode: <strong>{% if gc_settings.live_mode %}🔴 Live{% else %}🟡 Sandbox{% endif %}</strong>
+                &nbsp;|&nbsp;
+                Collection: {{ gc_settings.days_until_collection or 5 }} days after request
+            </p>
+        </div>
+    </div>
+</div>
+{% elif gc_settings.enabled and not is_configured %}
+<div class="panel mb-4" style="background: var(--accent-red)22; border-left: 4px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-red);">Configuration Incomplete</strong>
+            <p class="text-muted" style="margin: 0;">Please add your GoCardless access token below to enable payments.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<form method="POST">
+    <!-- Enable/Disable -->
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">🔌 Enable GoCardless</h3>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="enabled" value="1" 
+                       {% if gc_settings.enabled %}checked{% endif %}
+                       onchange="toggleSettings(this)">
+                <span>Enable GoCardless Direct Debit payments</span>
+            </label>
+        </div>
+    </div>
+    
+    <div id="gc-settings" style="{% if not gc_settings.enabled %}opacity: 0.5; pointer-events: none;{% endif %}">
+        
+        <!-- API Credentials -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🔑 API Credentials</h3>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">
+                Get your access token from 
+                <a href="https://manage.gocardless.com/developers/access-tokens" target="_blank" style="color: var(--accent-yellow);">
+                    GoCardless Dashboard → Developers → Access Tokens
+                </a>
+            </p>
+            
+            <!-- Mode Toggle -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label">Environment</label>
+                <div class="flex gap-4">
+                    <label class="form-check" style="padding: 1rem; background: var(--bg-dark); border-radius: 8px; flex: 1; {% if not gc_settings.live_mode %}border: 2px solid var(--accent-yellow);{% endif %}">
+                        <input type="radio" name="live_mode" value="0" {% if not gc_settings.live_mode %}checked{% endif %}>
+                        <span>
+                            <strong>🟡 Sandbox</strong>
+                            <small class="text-muted" style="display: block;">Test with fake bank accounts</small>
+                        </span>
+                    </label>
+                    <label class="form-check" style="padding: 1rem; background: var(--bg-dark); border-radius: 8px; flex: 1; {% if gc_settings.live_mode %}border: 2px solid var(--accent-red);{% endif %}">
+                        <input type="radio" name="live_mode" value="1" {% if gc_settings.live_mode %}checked{% endif %}>
+                        <span>
+                            <strong>🔴 Live</strong>
+                            <small class="text-muted" style="display: block;">Process real Direct Debits</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Sandbox Token -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
+                <h4 style="margin-top: 0; color: var(--accent-yellow);">🟡 Sandbox Access Token</h4>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <input type="password" name="sandbox_access_token" class="form-control" 
+                           value="{{ gc_settings.sandbox_access_token or '' }}"
+                           placeholder="sandbox_...">
+                    <small class="text-muted">Create a sandbox access token for testing</small>
+                </div>
+            </div>
+            
+            <!-- Live Token -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 3px solid var(--accent-red);">
+                <h4 style="margin-top: 0; color: var(--accent-red);">🔴 Live Access Token</h4>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <input type="password" name="live_access_token" class="form-control" 
+                           value="{{ gc_settings.live_access_token or '' }}"
+                           placeholder="live_...">
+                    <small class="text-muted">Your live access token for real payments</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Webhook Configuration -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🔔 Webhook Configuration</h3>
+            <p class="text-muted" style="margin-bottom: 1rem;">
+                Configure a webhook in GoCardless to automatically update payment statuses.
+            </p>
+            
+            <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <label class="form-label" style="margin-bottom: 0.5rem;">Webhook URL</label>
+                <div class="flex gap-2" style="align-items: center;">
+                    <code style="flex: 1; padding: 0.75rem; background: var(--bg-medium); border-radius: 6px; word-break: break-all;">
+                        {{ request.host_url }}webhook/gocardless
+                    </code>
+                    <button type="button" class="btn btn-secondary" onclick="copyToClipboard('{{ request.host_url }}webhook/gocardless')">📋</button>
+                </div>
+                <small class="text-muted">Add this URL in GoCardless Dashboard → Developers → Webhooks</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Webhook Secret</label>
+                <input type="password" name="webhook_secret" class="form-control" 
+                       value="{{ gc_settings.webhook_secret or '' }}"
+                       placeholder="Your webhook secret...">
+                <small class="text-muted">Found in GoCardless webhook settings after creating the endpoint</small>
+            </div>
+            
+            <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <strong>Recommended Webhook Events:</strong>
+                <ul style="margin: 0.5rem 0 0 1.5rem; color: var(--text-secondary);">
+                    <li>Payments (all events)</li>
+                    <li>Mandates (all events)</li>
+                    <li>Payouts (optional)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Payment Settings -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">💰 Payment Settings</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Payment Description</label>
+                    <input type="text" name="payment_description" class="form-control" 
+                           value="{{ gc_settings.payment_description or 'Invoice Payment' }}"
+                           placeholder="Invoice Payment">
+                    <small class="text-muted">Appears on customer's bank statement</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Days Until Collection</label>
+                    <input type="number" name="days_until_collection" class="form-control" 
+                           value="{{ gc_settings.days_until_collection or 5 }}"
+                           min="2" max="30">
+                    <small class="text-muted">Minimum 2 working days for Direct Debit</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_email" value="1" 
+                           {% if gc_settings.include_in_email != 0 %}checked{% endif %}>
+                    <span>Include Direct Debit setup link in invoice emails (for new customers)</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_invoice_pdf" value="1" 
+                           {% if gc_settings.include_in_invoice_pdf != 0 %}checked{% endif %}>
+                    <span>Include Direct Debit information in invoice PDF</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Advanced Options -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">⚙️ Advanced Options</h3>
+            
+            <div class="form-group">
+                <label class="form-label">Success Redirect URL (Optional)</label>
+                <input type="url" name="success_redirect_url" class="form-control" 
+                       value="{{ gc_settings.success_redirect_url or '' }}"
+                       placeholder="https://yoursite.com/mandate-setup-complete">
+                <small class="text-muted">Where to redirect after customer sets up Direct Debit mandate</small>
+            </div>
+        </div>
+        
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-lg">💾 Save GoCardless Settings</button>
+</form>
+
+<!-- How It Works -->
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 How Direct Debit Works</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">1️⃣</div>
+            <strong>Set Up Mandate</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Customer authorizes Direct Debit from their bank account
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">2️⃣</div>
+            <strong>Request Payment</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                You request payment against an invoice
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">3️⃣</div>
+            <strong>Automatic Collection</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Payment collected on charge date ({{ gc_settings.days_until_collection or 5 }} days)
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">4️⃣</div>
+            <strong>Invoice Marked Paid</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Webhook updates invoice status automatically
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Active Mandates -->
+{% if mandates %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 Active Mandates</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Reference</th>
+                <th>Scheme</th>
+                <th>Status</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mandate in mandates %}
+            <tr>
+                <td>{{ mandate.customer_name or 'Unknown' }}</td>
+                <td><code>{{ mandate.reference or mandate.gc_mandate_id[:12] }}...</code></td>
+                <td>{{ mandate.scheme|upper }}</td>
+                <td>
+                    {% if mandate.status == 'active' %}
+                    <span class="badge badge-paid">Active</span>
+                    {% elif mandate.status == 'pending_submission' %}
+                    <span class="badge badge-draft">Pending</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">{{ mandate.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.85rem;">{{ mandate.created_at.strftime('%Y-%m-%d') if mandate.created_at else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Webhook Logs -->
+{% if webhook_logs %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📜 Recent Webhook Events</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Invoice</th>
+                <th>Status</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in webhook_logs %}
+            <tr>
+                <td style="font-size: 0.85rem;">{{ log.received_at.strftime('%Y-%m-%d %H:%M') if log.received_at else 'N/A' }}</td>
+                <td><code style="font-size: 0.8rem;">{{ log.event_type }}</code></td>
+                <td>
+                    {% if log.invoice_id %}
+                    <a href="{{ url_for('view_invoice', invoice_id=log.invoice_id) }}">#{{ log.invoice_id }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if log.status == 'success' %}
+                    <span class="badge badge-paid">Success</span>
+                    {% else %}
+                    <span class="badge badge-overdue">{{ log.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.85rem;">{{ log.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<script>
+function toggleSettings(checkbox) {
+    const settings = document.getElementById('gc-settings');
+    if (checkbox.checked) {
+        settings.style.opacity = '1';
+        settings.style.pointerEvents = 'auto';
+    } else {
+        settings.style.opacity = '0.5';
+        settings.style.pointerEvents = 'none';
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

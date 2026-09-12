@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Customer Portal{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-yellow: #eab308;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --border: #475569;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .portal-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .portal-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .portal-logo img {
+            height: 40px;
+            border-radius: 8px;
+        }
+        
+        .portal-logo h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .portal-logo .customer-badge {
+            background: var(--accent-purple);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .portal-nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .portal-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        
+        .portal-nav a:hover, .portal-nav a.active {
+            color: var(--text-primary);
+        }
+        
+        .portal-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .portal-user .user-name {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .btn-logout {
+            background: var(--accent-red);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        
+        .portal-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-card.highlight {
+            border-color: var(--accent-yellow);
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(234, 179, 8, 0.1));
+        }
+        
+        .stat-card.danger {
+            border-color: var(--accent-red);
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(239, 68, 68, 0.1));
+        }
+        
+        .stat-card.success {
+            border-color: var(--accent-green);
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(34, 197, 94, 0.1));
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stat-card.highlight .stat-value {
+            color: var(--accent-yellow);
+        }
+        
+        .stat-card.danger .stat-value {
+            color: var(--accent-red);
+        }
+        
+        .stat-card.success .stat-value {
+            color: var(--accent-green);
+        }
+        
+        /* Panel / Card */
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-paid {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+        }
+        
+        .badge-unpaid {
+            background: rgba(234, 179, 8, 0.2);
+            color: var(--accent-yellow);
+        }
+        
+        .badge-overdue {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
+        
+        .badge-partial {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #16a34a;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+        }
+        
+        .alert-warning {
+            background: rgba(234, 179, 8, 0.2);
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+        
+        /* Filter tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            transition: all 0.2s;
+        }
+        
+        .filter-tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .filter-tab.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        /* Impersonation banner */
+        .impersonation-banner {
+            background: var(--accent-purple);
+            color: white;
+            padding: 0.75rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .impersonation-banner a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .portal-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .portal-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if session.get('impersonating') %}
+    <div class="impersonation-banner">
+        <span>⚠️ You are viewing this portal as: <strong>{{ portal_user.customer_name }}</strong></span>
+        <a href="{{ url_for('end_impersonation') }}">Exit Impersonation</a>
+    </div>
+    {% endif %}
+    
+    {% if portal_user %}
+    <header class="portal-header">
+        <div class="portal-logo">
+            {% if business_info and business_info.logo_path %}
+            <img src="{{ url_for('static', filename='uploads/' + business_info.logo_path) }}" alt="Logo">
+            {% endif %}
+            <h1>{{ business_info.company_name if business_info else 'Customer Portal' }}</h1>
+            <span class="customer-badge">Customer Portal</span>
+        </div>
+        
+        <nav class="portal-nav">
+            <a href="{{ url_for('portal.portal_dashboard') }}" class="{% if request.endpoint == 'portal_dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('portal.portal_invoices') }}" class="{% if request.endpoint == 'portal_invoices' %}active{% endif %}">Invoices</a>
+            <a href="{{ url_for('portal.portal_account') }}" class="{% if request.endpoint == 'portal_account' %}active{% endif %}">My Account</a>
+        </nav>
+        
+        <div class="portal-user">
+            <span class="user-name">{{ portal_user.customer_name }}</span>
+            <a href="{{ url_for('portal.portal_logout') }}" class="btn-logout">Logout</a>
+        </div>
+    </header>
+    {% endif %}
+    
+    <main class="portal-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

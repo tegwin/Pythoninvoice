@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Team Management - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">👥 Team Management</h1>
+    <p class="page-subtitle">Manage team members and their access levels</p>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">➕ Add Team Member</h3>
+    
+    <form method="POST" action="{{ url_for('add_team_member') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="role">Role</label>
+            <select id="role" name="role" class="form-control" style="max-width: 300px;" required>
+                {% for role_id, role_info in roles.items() %}
+                {% if role_id != 'owner' %}
+                <option value="{{ role_id }}">{{ role_info.name }} - {{ role_info.description }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">➕ Add Team Member</button>
+    </form>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 Role Permissions</h3>
+    
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Invoices</th>
+                    <th>Customers</th>
+                    <th>Products</th>
+                    <th>Payments</th>
+                    <th>Settings</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Administrator</strong></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Accountant</strong></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-draft">None</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Bookkeeper</strong></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-draft">None</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Sales</strong></td>
+                    <td><span class="badge badge-partial">Create/Edit</span></td>
+                    <td><span class="badge badge-paid">Full</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-draft">None</span></td>
+                    <td><span class="badge badge-draft">None</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Viewer</strong></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-sent">View</span></td>
+                    <td><span class="badge badge-draft">None</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">👤 All Users</h3>
+    
+    <!-- Owner Account -->
+    <div style="background: var(--bg-dark); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid var(--accent-yellow);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <strong style="font-size: 1.1rem;">{{ owner.username }}</strong>
+                <span class="badge badge-paid" style="margin-left: 0.5rem;">Owner</span>
+                <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                    {{ owner.email or 'No email set' }}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                    Last login: {{ owner.last_login.strftime('%Y-%m-%d %H:%M') if owner.last_login else 'Never' }}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                    Logins: {{ owner.login_count or 0 }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <h4 style="margin: 1.5rem 0 1rem 0; color: var(--text-secondary);">Team Members</h4>
+    
+    {% if members %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members %}
+            <tr>
+                <td><strong>{{ member.username }}</strong></td>
+                <td>{{ member.email or '-' }}</td>
+                <td>
+                    <span class="badge badge-{% if member.role == 'admin' %}paid{% elif member.role == 'accountant' %}sent{% elif member.role == 'bookkeeper' %}partial{% else %}draft{% endif %}">
+                        {{ member.role_info.name }}
+                    </span>
+                </td>
+                <td>
+                    {% if member.active and member.user_active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ member.last_login.strftime('%Y-%m-%d %H:%M') if member.last_login else 'Never' }}</td>
+                <td>
+                    <div class="flex gap-1">
+                        <button class="btn btn-secondary btn-sm" onclick="showEditModal({{ member.id }}, '{{ member.role }}')">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="showPasswordModal({{ member.id }})">Reset PW</button>
+                        {% if member.active %}
+                        <form method="POST" action="{{ url_for('deactivate_team_member', member_id=member.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Deactivate this team member?');">Deactivate</button>
+                        </form>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('reactivate_team_member', member_id=member.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm">Reactivate</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('delete_team_member', member_id=member.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete this team member? This cannot be undone.');">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">👥</div>
+        <h3 class="empty-state-title">No Team Members</h3>
+        <p>Add team members to give others access to your invoicing data.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('settings') }}" class="btn btn-secondary">← Back to Settings</a>
+</div>
+
+<!-- Edit Role Modal -->
+<div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem;">
+    <div style="max-width: 400px; margin: 4rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
+        <h3 style="margin-top: 0;">Change Role</h3>
+        <form method="POST" action="{{ url_for('update_team_member_role') }}" id="edit-form">
+            <input type="hidden" name="member_id" id="edit-member-id">
+            <div class="form-group">
+                <label class="form-label" for="edit-role">New Role</label>
+                <select id="edit-role" name="role" class="form-control" required>
+                    {% for role_id, role_info in roles.items() %}
+                    {% if role_id != 'owner' %}
+                    <option value="{{ role_id }}">{{ role_info.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="password-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem;">
+    <div style="max-width: 400px; margin: 4rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
+        <h3 style="margin-top: 0;">Reset Password</h3>
+        <form method="POST" action="{{ url_for('reset_team_member_password') }}" id="password-form">
+            <input type="hidden" name="member_id" id="password-member-id">
+            <div class="form-group">
+                <label class="form-label" for="new-password">New Password</label>
+                <input type="password" id="new-password" name="new_password" class="form-control" required>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary">Reset Password</button>
+                <button type="button" class="btn btn-secondary" onclick="hidePasswordModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showEditModal(memberId, currentRole) {
+    document.getElementById('edit-member-id').value = memberId;
+    document.getElementById('edit-role').value = currentRole;
+    document.getElementById('edit-modal').style.display = 'block';
+}
+
+function hideEditModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+}
+
+function showPasswordModal(memberId) {
+    document.getElementById('password-member-id').value = memberId;
+    document.getElementById('new-password').value = '';
+    document.getElementById('password-modal').style.display = 'block';
+}
+
+function hidePasswordModal() {
+    document.getElementById('password-modal').style.display = 'none';
+}
+
+// Close modals on outside click
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) hideEditModal();
+});
+document.getElementById('password-modal').addEventListener('click', function(e) {
+    if (e.target === this) hidePasswordModal();
+});
+</script>
+{% endblock %}

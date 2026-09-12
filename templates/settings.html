@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">⚙️ Settings</h1>
+    <p class="page-subtitle">Configure your company and invoice settings</p>
+</div>
+
+<div class="flex gap-2 mb-4" style="flex-wrap: wrap;">
+    <a href="{{ url_for('integrations') }}" class="btn btn-primary">🔌 Integrations</a>
+    <a href="{{ url_for('chart_of_accounts') }}" class="btn btn-secondary">📊 Chart of Accounts</a>
+    <a href="{{ url_for('recurring_invoices') }}" class="btn btn-secondary">🔄 Recurring Invoices</a>
+    <a href="{{ url_for('api_keys') }}" class="btn btn-secondary">🔑 API Keys</a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <!-- Branding Section -->
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">🎨 Branding</h3>
+        <p class="text-muted" style="margin-bottom: 1rem;">Customize how your app appears in the navigation bar and footer</p>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="brand_name">Brand Name</label>
+                <input type="text" id="brand_name" name="brand_name" class="form-control" 
+                       value="{{ settings.brand_name or '' }}" placeholder="Invoice Manager">
+                <small class="text-muted">Displayed in the navigation bar</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="brand_logo">Brand Logo</label>
+                <input type="file" id="brand_logo" name="brand_logo" class="form-control" accept="image/*">
+                {% if settings.brand_logo_path %}
+                {% set logo_filename = settings.brand_logo_path.replace('\\', '/').split('/')[-1] %}
+                <div style="margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-dark); border-radius: 4px; display: inline-block;">
+                    <img src="{{ url_for('serve_upload', filename=logo_filename) }}" 
+                         alt="Current logo" style="max-height: 40px; display: block;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="show_brand_name" value="1" 
+                           {% if settings.show_brand_name != 0 %}checked{% endif %}>
+                    <span>Show brand name in navigation</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="show_brand_logo" value="1" 
+                           {% if settings.show_brand_logo %}checked{% endif %}>
+                    <span>Show brand logo in navigation</span>
+                </label>
+            </div>
+        </div>
+        
+        <hr style="border-color: var(--border); margin: 1.5rem 0;">
+        <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text-secondary);">Footer Settings</h4>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="show_footer" value="1" 
+                       {% if settings.show_footer != 0 %}checked{% endif %}>
+                <span>Show footer</span>
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="footer_text">Footer Text</label>
+            <input type="text" id="footer_text" name="footer_text" class="form-control" 
+                   value="{{ settings.footer_text or 'Powered by Invoice Manager' }}" 
+                   placeholder="Powered by Invoice Manager">
+            <small class="text-muted">Leave empty for no footer text, or customize with your own message</small>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Company Information</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="company_name">Company Name</label>
+                <input type="text" id="company_name" name="company_name" class="form-control" 
+                       value="{{ settings.company_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control" 
+                       value="{{ settings.email or '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" class="form-control" 
+                       value="{{ settings.phone or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="website">Website</label>
+                <input type="url" id="website" name="website" class="form-control" 
+                       value="{{ settings.website or '' }}">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="logo">Company Logo (for invoices)</label>
+            <input type="file" id="logo" name="logo" class="form-control" accept="image/*">
+            {% if settings.logo_path %}
+            <p class="text-muted" style="margin-top: 0.5rem;">Current logo: {{ settings.logo_path }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Address</h3>
+        
+        <div class="form-group">
+            <label class="form-label" for="address_line1">Address Line 1</label>
+            <input type="text" id="address_line1" name="address_line1" class="form-control" 
+                   value="{{ settings.address_line1 or '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="address_line2">Address Line 2</label>
+            <input type="text" id="address_line2" name="address_line2" class="form-control" 
+                   value="{{ settings.address_line2 or '' }}">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="city">City</label>
+                <input type="text" id="city" name="city" class="form-control" 
+                       value="{{ settings.city or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="state">State / Province</label>
+                <input type="text" id="state" name="state" class="form-control" 
+                       value="{{ settings.state or '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="postal_code">Postal Code</label>
+                <input type="text" id="postal_code" name="postal_code" class="form-control" 
+                       value="{{ settings.postal_code or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="country">Country</label>
+                <select id="country" name="country" class="form-control">
+                    <option value="">-- Select Country --</option>
+                    <option value="United Kingdom" {% if settings.country == 'United Kingdom' %}selected{% endif %}>United Kingdom</option>
+                    <option value="United States" {% if settings.country == 'United States' %}selected{% endif %}>United States</option>
+                    <option value="South Africa" {% if settings.country == 'South Africa' %}selected{% endif %}>South Africa</option>
+                    <option value="Canada" {% if settings.country == 'Canada' %}selected{% endif %}>Canada</option>
+                    <option value="Australia" {% if settings.country == 'Australia' %}selected{% endif %}>Australia</option>
+                    <option value="New Zealand" {% if settings.country == 'New Zealand' %}selected{% endif %}>New Zealand</option>
+                    <option value="Ireland" {% if settings.country == 'Ireland' %}selected{% endif %}>Ireland</option>
+                    <option value="Germany" {% if settings.country == 'Germany' %}selected{% endif %}>Germany</option>
+                    <option value="France" {% if settings.country == 'France' %}selected{% endif %}>France</option>
+                    <option value="Netherlands" {% if settings.country == 'Netherlands' %}selected{% endif %}>Netherlands</option>
+                    <option value="Belgium" {% if settings.country == 'Belgium' %}selected{% endif %}>Belgium</option>
+                    <option value="Switzerland" {% if settings.country == 'Switzerland' %}selected{% endif %}>Switzerland</option>
+                    <option value="Spain" {% if settings.country == 'Spain' %}selected{% endif %}>Spain</option>
+                    <option value="Italy" {% if settings.country == 'Italy' %}selected{% endif %}>Italy</option>
+                    <option value="India" {% if settings.country == 'India' %}selected{% endif %}>India</option>
+                    <option value="Japan" {% if settings.country == 'Japan' %}selected{% endif %}>Japan</option>
+                    <option value="Singapore" {% if settings.country == 'Singapore' %}selected{% endif %}>Singapore</option>
+                    <option value="United Arab Emirates" {% if settings.country == 'United Arab Emirates' %}selected{% endif %}>United Arab Emirates</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0;">Invoice Defaults</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="default_currency">Default Currency</label>
+                <select id="default_currency" name="default_currency" class="form-control">
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}" {% if settings.default_currency == code %}selected{% endif %}>
+                        {{ info.symbol }} {{ code }} - {{ info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="default_tax_rate">Default Tax Rate</label>
+                <select id="default_tax_rate" name="default_tax_rate" class="form-control">
+                    {% set tax_rates = (settings.tax_rates or '0,5,10,15,20,25').split(',') %}
+                    {% set current_tax = settings.default_tax_rate|default(0)|float|int %}
+                    {% for rate in tax_rates %}
+                    {% set rate_val = rate|trim|int %}
+                    <option value="{{ rate|trim }}" {% if current_tax == rate_val %}selected{% endif %}>
+                        {% if rate|trim == '0' %}No VAT (0%){% else %}{{ rate|trim }}% VAT{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="tax_rates">Available Tax Rates</label>
+            <input type="text" id="tax_rates" name="tax_rates" class="form-control" 
+                   value="{{ settings.tax_rates or '0,5,10,15,20,25' }}" 
+                   placeholder="0,5,10,15,20,25">
+            <small class="text-muted">Comma-separated list of tax rates (%). Use 0 for "No Tax" option.</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="invoice_prefix">Invoice Number Prefix</label>
+            <input type="text" id="invoice_prefix" name="invoice_prefix" class="form-control" 
+                   value="{{ settings.invoice_prefix or 'INV' }}" placeholder="e.g., INV">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="payment_terms">Default Payment Terms</label>
+            <textarea id="payment_terms" name="payment_terms" class="form-control" 
+                      placeholder="e.g., Payment due within 30 days">{{ settings.payment_terms or '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="bank_details">Bank Details / Payment Instructions</label>
+            <textarea id="bank_details" name="bank_details" class="form-control" 
+                      placeholder="Bank name, account number, sort code, etc.">{{ settings.bank_details or '' }}</textarea>
+        </div>
+    </div>
+    
+    <div class="panel mt-4">
+        <h3 class="section-title" style="margin-top: 0;">🏛️ Tax Authority</h3>
+        
+        {% if settings.tax_authority %}
+        <div class="info-card mb-3" style="background: var(--bg-dark); border-left: 4px solid var(--accent-yellow); padding: 1rem; border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 2rem;">🏛️</span>
+                <div>
+                    <strong style="font-size: 1.1rem;">{{ settings.tax_authority }}</strong>
+                    {% if settings.tax_authority_email %}
+                    <br><span class="text-muted">Submission email: {{ settings.tax_authority_email }}</span>
+                    {% endif %}
+                    {% if settings.tax_authority_api_key %}
+                    <br><span style="color: var(--accent-green);">✓ API Key configured</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-group">
+            <label class="form-label" for="tax_authority">Tax Authority</label>
+            <select id="tax_authority" name="tax_authority" class="form-control">
+                <option value="">-- Select Tax Authority --</option>
+                <option value="HMRC" {% if settings.tax_authority == 'HMRC' %}selected{% endif %}>HMRC (UK)</option>
+                <option value="IRS" {% if settings.tax_authority == 'IRS' %}selected{% endif %}>IRS (USA)</option>
+                <option value="CRA" {% if settings.tax_authority == 'CRA' %}selected{% endif %}>CRA (Canada)</option>
+                <option value="ATO" {% if settings.tax_authority == 'ATO' %}selected{% endif %}>ATO (Australia)</option>
+                <option value="SARS" {% if settings.tax_authority == 'SARS' %}selected{% endif %}>SARS (South Africa)</option>
+                <option value="IRD" {% if settings.tax_authority == 'IRD' %}selected{% endif %}>IRD (New Zealand)</option>
+                <option value="IRAS" {% if settings.tax_authority == 'IRAS' %}selected{% endif %}>IRAS (Singapore)</option>
+                <option value="OTHER" {% if settings.tax_authority == 'OTHER' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="tax_authority_api_key">Tax Authority API Key</label>
+                <input type="password" id="tax_authority_api_key" name="tax_authority_api_key" class="form-control"
+                       value="{{ settings.tax_authority_api_key or '' }}"
+                       placeholder="For MTD/eFile integration">
+                <small class="text-muted">Used for Making Tax Digital (UK) or similar digital submissions</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="tax_authority_email">Tax Authority Submission Email</label>
+                <input type="email" id="tax_authority_email" name="tax_authority_email" class="form-control"
+                       value="{{ settings.tax_authority_email or '' }}"
+                       placeholder="e.g., submissions@hmrc.gov.uk">
+                <small class="text-muted">Some authorities accept email submissions</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel mt-4">
+        <h3 class="section-title" style="margin-top: 0;">👔 Accountant Details</h3>
+        
+        {% if settings.accountant_name or settings.accountant_email %}
+        <div class="info-card mb-3" style="background: var(--bg-dark); border-left: 4px solid var(--accent-green); padding: 1rem; border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 2rem;">👔</span>
+                <div>
+                    <strong style="font-size: 1.1rem;">{{ settings.accountant_name or 'Accountant' }}</strong>
+                    {% if settings.accountant_email %}
+                    <br><a href="mailto:{{ settings.accountant_email }}" style="color: var(--accent-yellow);">{{ settings.accountant_email }}</a>
+                    {% endif %}
+                    {% if settings.accountant_phone %}
+                    <br><span class="text-muted">{{ settings.accountant_phone }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="accountant_name">Accountant / Firm Name</label>
+                <input type="text" id="accountant_name" name="accountant_name" class="form-control"
+                       value="{{ settings.accountant_name or '' }}"
+                       placeholder="e.g., Smith & Associates">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="accountant_email">Accountant Email</label>
+                <input type="email" id="accountant_email" name="accountant_email" class="form-control"
+                       value="{{ settings.accountant_email or '' }}"
+                       placeholder="e.g., accounts@smith-associates.com">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="accountant_phone">Accountant Phone</label>
+            <input type="tel" id="accountant_phone" name="accountant_phone" class="form-control"
+                   value="{{ settings.accountant_phone or '' }}"
+                   placeholder="e.g., +44 1234 567890">
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary mt-4">💾 Save Settings</button>
+</form>
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">🔧 More Settings</h3>
+    <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('email_settings') }}" class="btn btn-secondary">📧 Email Settings</a>
+        <a href="{{ url_for('team_management') }}" class="btn btn-secondary">👥 Team Management</a>
+        <a href="{{ url_for('portal_users') }}" class="btn btn-secondary">🌐 Customer Portal</a>
+        <a href="{{ url_for('integrations') }}" class="btn btn-secondary">💱 Integrations</a>
+        <a href="{{ url_for('database_settings') }}" class="btn btn-secondary">🗄️ Database</a>
+        <a href="{{ url_for('api_keys') }}" class="btn btn-secondary">🔑 API Keys</a>
+        <a href="{{ url_for('webhooks') }}" class="btn btn-secondary">🔔 Webhooks</a>
+    </div>
+</div>
+{% endblock %}

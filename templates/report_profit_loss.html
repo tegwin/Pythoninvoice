@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Profit & Loss Report - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📈 Profit & Loss Report</h1>
+        <p class="page-subtitle">Income Statement</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reports') }}" class="btn btn-secondary">← Back to Reports</a>
+        {% if report %}
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Date Range Selector -->
+<div class="panel mb-4">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label>Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label>End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label class="form-check">
+                <input type="checkbox" name="compare" value="1" {% if compare %}checked{% endif %}>
+                <span>Compare to Previous Period</span>
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+    </form>
+</div>
+
+{% if report %}
+<!-- Disclaimer -->
+<div class="panel mb-4" style="background: var(--accent-yellow)22; border-left: 4px solid var(--accent-yellow);">
+    <strong style="color: var(--accent-yellow);">⚠️ Disclaimer</strong>
+    <p class="text-muted" style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">{{ report.disclaimer }}</p>
+</div>
+
+<!-- Report Header -->
+<div class="panel mb-4" style="text-align: center;">
+    <h2 style="margin: 0;">Profit & Loss Statement</h2>
+    <p class="text-muted" style="margin: 0.5rem 0;">
+        {{ report.period.start_date }} to {{ report.period.end_date }}
+    </p>
+    <p class="text-muted" style="margin: 0; font-size: 0.85rem;">
+        Generated: {{ report.generated_at[:19] }}
+    </p>
+</div>
+
+<div style="display: grid; grid-template-columns: {% if report.previous_period %}1fr 1fr{% else %}1fr{% endif %}; gap: 1.5rem;">
+    <!-- Current Period -->
+    <div>
+        {% if report.previous_period %}
+        <h3 style="text-align: center; margin-bottom: 1rem;">Current Period</h3>
+        {% endif %}
+        
+        <!-- Income Section -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-green);">Income</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Gross Revenue</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.income.gross_revenue) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Less: Credit Notes</td>
+                        <td class="text-right" style="color: var(--accent-red);">({{ currency_symbol }}{{ "%.2f"|format(report.income.credit_notes) }})</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; font-size: 1.1rem;">
+                        <td>Net Revenue</td>
+                        <td class="text-right" style="color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(report.income.net_revenue) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">
+                Based on {{ report.income.invoice_count }} paid invoices, {{ report.income.credit_note_count }} credit notes
+            </p>
+        </div>
+        
+        <!-- Expenses Section -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-red);">Expenses</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Bills & Supplier Invoices</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.expenses.bills_total) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Other Expenses</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.expenses.expenses_total) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; font-size: 1.1rem;">
+                        <td>Total Expenses</td>
+                        <td class="text-right" style="color: var(--accent-red);">{{ currency_symbol }}{{ "%.2f"|format(report.expenses.total_expenses) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Profit Section -->
+        <div class="panel" style="background: {% if report.profit.gross_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %}22;">
+            <h3 class="section-title" style="margin-top: 0;">Net Profit / (Loss)</h3>
+            <div style="text-align: center; font-size: 2.5rem; font-weight: bold; color: {% if report.profit.gross_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+                {{ currency_symbol }}{{ "%.2f"|format(report.profit.gross_profit) }}
+            </div>
+            <p class="text-muted" style="text-align: center; margin: 0.5rem 0 0 0;">
+                Profit Margin: {{ "%.1f"|format(report.profit.profit_margin) }}%
+            </p>
+        </div>
+    </div>
+    
+    {% if report.previous_period %}
+    <!-- Previous Period -->
+    <div>
+        <h3 style="text-align: center; margin-bottom: 1rem;">Previous Period</h3>
+        
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-green);">Income</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Gross Revenue</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.previous_period.income.gross_revenue) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Less: Credit Notes</td>
+                        <td class="text-right" style="color: var(--accent-red);">({{ currency_symbol }}{{ "%.2f"|format(report.previous_period.income.credit_notes) }})</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; font-size: 1.1rem;">
+                        <td>Net Revenue</td>
+                        <td class="text-right" style="color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(report.previous_period.income.net_revenue) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0; color: var(--accent-red);">Expenses</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td>Bills & Supplier Invoices</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.previous_period.expenses.bills_total) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Other Expenses</td>
+                        <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.previous_period.expenses.expenses_total) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; font-size: 1.1rem;">
+                        <td>Total Expenses</td>
+                        <td class="text-right" style="color: var(--accent-red);">{{ currency_symbol }}{{ "%.2f"|format(report.previous_period.expenses.total_expenses) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="panel" style="background: {% if report.previous_period.profit.gross_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %}22;">
+            <h3 class="section-title" style="margin-top: 0;">Net Profit / (Loss)</h3>
+            <div style="text-align: center; font-size: 2.5rem; font-weight: bold; color: {% if report.previous_period.profit.gross_profit >= 0 %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+                {{ currency_symbol }}{{ "%.2f"|format(report.previous_period.profit.gross_profit) }}
+            </div>
+            <p class="text-muted" style="text-align: center; margin: 0.5rem 0 0 0;">
+                Profit Margin: {{ "%.1f"|format(report.previous_period.profit.profit_margin) }}%
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Expense Breakdown -->
+{% if report.expenses.by_category %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">Expense Breakdown by Category</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th class="text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in report.expenses.by_category %}
+            <tr>
+                <td>{{ cat.category }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(cat.amount or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% else %}
+<div class="panel">
+    <div class="empty-state">
+        <p>Select a date range to generate the report</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

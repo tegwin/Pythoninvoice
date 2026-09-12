@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🧾 Expenses</h1>
+    <a href="{{ url_for('new_expense') }}" class="btn btn-primary">+ New Expense</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid mb-4">
+    <div class="stat-card">
+        <div class="stat-value">{{ summary.total_expenses or 0 }}</div>
+        <div class="stat-label">Total Expenses</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ currency_symbol }}{{ "%.2f"|format(summary.total_amount or 0) }}</div>
+        <div class="stat-label">Total Spent</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-yellow">{{ currency_symbol }}{{ "%.2f"|format(summary.pending_amount or 0) }}</div>
+        <div class="stat-label">Pending Approval</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-red">{{ currency_symbol }}{{ "%.2f"|format(summary.reimbursable_amount or 0) }}</div>
+        <div class="stat-label">To Reimburse</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="panel mb-4">
+    <form method="GET" class="flex gap-4" style="flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-control" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if request.args.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if request.args.get('status') == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if request.args.get('status') == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="reimbursed" {% if request.args.get('status') == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}" onchange="this.form.submit()">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}" onchange="this.form.submit()">
+        </div>
+        {% if request.args.get('category') or request.args.get('status') or request.args.get('date_from') or request.args.get('date_to') %}
+        <a href="{{ url_for('expenses') }}" class="btn btn-secondary">Clear Filters</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="panel">
+    {% if expenses %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Supplier</th>
+                <th style="text-align: right;">Amount</th>
+                <th>Receipt</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.expense_date }}</td>
+                <td>
+                    <strong>{{ expense.description or '-' }}</strong>
+                    {% if expense.is_billable %}
+                    <span class="badge badge-sent" style="margin-left: 0.5rem; font-size: 0.7rem;">Billable</span>
+                    {% endif %}
+                    {% if expense.is_reimbursable %}
+                    <span class="badge badge-draft" style="margin-left: 0.25rem; font-size: 0.7rem;">Reimburse</span>
+                    {% endif %}
+                </td>
+                <td>{{ expense.category or '-' }}</td>
+                <td>{{ expense.supplier_name or '-' }}</td>
+                <td style="text-align: right;">
+                    <strong>{{ currency_symbol }}{{ "%.2f"|format(expense.amount or 0) }}</strong>
+                </td>
+                <td>
+                    {% if expense.receipt_path %}
+                    <a href="{{ url_for('view_receipt', expense_id=expense.id) }}" target="_blank" class="btn btn-secondary btn-sm">📎</a>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ expense.status }}">{{ expense.status|title }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('view_expense', expense_id=expense.id) }}" class="btn btn-secondary btn-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🧾</div>
+        <div class="empty-state-title">No expenses yet</div>
+        <p class="text-muted">Track your business expenses and upload receipts.</p>
+        <a href="{{ url_for('new_expense') }}" class="btn btn-primary">+ Add Expense</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Category Breakdown -->
+{% if by_category %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📊 By Category</h3>
+    <div class="form-row" style="flex-wrap: wrap;">
+        {% for cat in by_category %}
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; min-width: 150px; text-align: center;">
+            <div style="font-size: 1.25rem; font-weight: bold;">{{ currency_symbol }}{{ "%.2f"|format(cat.total or 0) }}</div>
+            <div class="text-muted" style="font-size: 0.85rem;">{{ cat.category }}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">{{ cat.count }} expense{{ 's' if cat.count != 1 else '' }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

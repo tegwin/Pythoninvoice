@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Suppliers - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏭 Suppliers</h1>
+    <div class="flex gap-2">
+        <a href="{{ url_for('import_suppliers') }}" class="btn btn-secondary">📥 Import CSV</a>
+        <a href="{{ url_for('export_suppliers') }}" class="btn btn-secondary">📤 Export CSV</a>
+        <a href="{{ url_for('new_supplier') }}" class="btn btn-primary">+ New Supplier</a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid mb-4">
+    <div class="stat-card">
+        <div class="stat-value">{{ suppliers|length }}</div>
+        <div class="stat-label">Total Suppliers</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-red">{{ currency_symbol }}{{ "%.2f"|format(total_outstanding or 0) }}</div>
+        <div class="stat-label">Outstanding Bills</div>
+    </div>
+</div>
+
+<div class="panel">
+    {% if suppliers %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Bills</th>
+                <th>Outstanding</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for supplier in suppliers %}
+            <tr>
+                <td>
+                    <strong>{{ supplier.name }}</strong>
+                    {% if supplier.tax_id %}
+                    <small class="text-muted" style="display: block;">{{ supplier.tax_id }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ supplier.contact_name or '-' }}</td>
+                <td>
+                    {% if supplier.email %}
+                    <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ supplier.bill_count or 0 }}</td>
+                <td>
+                    {% if supplier.outstanding and supplier.outstanding > 0 %}
+                    <span class="text-red">{{ currency_symbol }}{{ "%.2f"|format(supplier.outstanding) }}</span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('view_supplier', supplier_id=supplier.id) }}" class="btn btn-secondary btn-sm">View</a>
+                    <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🏭</div>
+        <div class="empty-state-title">No suppliers yet</div>
+        <p class="text-muted">Add your first supplier to start tracking bills and expenses.</p>
+        <a href="{{ url_for('new_supplier') }}" class="btn btn-primary">+ Add Supplier</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

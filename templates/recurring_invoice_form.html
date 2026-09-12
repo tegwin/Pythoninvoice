@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}{% if recurring %}Edit{% else %}New{% endif %} Recurring Invoice - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if recurring %}✏️ Edit{% else %}➕ New{% endif %} Recurring Invoice</h1>
+    <p class="page-subtitle">{% if recurring %}Update recurring invoice settings{% else %}Set up automatic invoice generation{% endif %}</p>
+</div>
+
+<form method="POST" id="recurring-form">
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">👤 Customer & Schedule</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="customer_id">Customer *</label>
+                <select id="customer_id" name="customer_id" class="form-control" required>
+                    <option value="">Select Customer</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" {% if recurring and recurring.customer_id == customer.id %}selected{% endif %}>
+                        {{ customer.name }} {% if customer.email %}({{ customer.email }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="frequency">Frequency *</label>
+                <select id="frequency" name="frequency" class="form-control" required>
+                    {% for freq_id, freq_info in frequencies.items() %}
+                    <option value="{{ freq_id }}" {% if recurring and recurring.frequency == freq_id %}selected{% endif %}>
+                        {{ freq_info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="start_date">Start Date *</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" 
+                       value="{{ recurring.start_date if recurring else today }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="end_date">End Date (Optional)</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" 
+                       value="{{ recurring.end_date if recurring and recurring.end_date else '' }}">
+                <small class="text-muted">Leave blank for indefinite</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="next_invoice_date">Next Invoice Date</label>
+                <input type="date" id="next_invoice_date" name="next_invoice_date" class="form-control" 
+                       value="{{ recurring.next_invoice_date if recurring else today }}">
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">💰 Invoice Settings</h3>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="currency">Currency</label>
+                <select id="currency" name="currency" class="form-control">
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}" {% if (recurring and recurring.currency == code) or (not recurring and code == 'GBP') %}selected{% endif %}>
+                        {{ info.symbol }} {{ code }} - {{ info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="tax_rate">Default Tax Rate (%)</label>
+                <input type="number" id="tax_rate" name="tax_rate" class="form-control" 
+                       step="0.01" min="0" max="100" value="{{ recurring.tax_rate if recurring else 20 }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="invoice_prefix">Invoice Prefix</label>
+                <input type="text" id="invoice_prefix" name="invoice_prefix" class="form-control" 
+                       value="{{ recurring.invoice_prefix if recurring else 'REC-' }}" placeholder="REC-">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="payment_terms">Payment Terms</label>
+                <select id="payment_terms" name="payment_terms" class="form-control">
+                    <option value="Due on Receipt" {% if recurring and recurring.payment_terms == 'Due on Receipt' %}selected{% endif %}>Due on Receipt</option>
+                    <option value="Net 7" {% if recurring and recurring.payment_terms == 'Net 7' %}selected{% endif %}>Net 7</option>
+                    <option value="Net 14" {% if recurring and recurring.payment_terms == 'Net 14' %}selected{% endif %}>Net 14</option>
+                    <option value="Net 30" {% if (recurring and recurring.payment_terms == 'Net 30') or not recurring %}selected{% endif %}>Net 30</option>
+                    <option value="Net 60" {% if recurring and recurring.payment_terms == 'Net 60' %}selected{% endif %}>Net 60</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-check" style="margin-top: 2rem;">
+                    <input type="checkbox" name="auto_send" {% if recurring and recurring.auto_send %}checked{% endif %}>
+                    <span>Auto-send invoice when generated</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Invoice Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Notes to appear on generated invoices">{{ recurring.notes if recurring else '' }}</textarea>
+        </div>
+    </div>
+    
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">📦 Invoice Items</h3>
+        
+        <div id="items-container">
+            {% if recurring and recurring['items'] %}
+            {% for item in recurring['items'] %}
+            <div class="item-row" data-index="{{ loop.index0 }}">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Type</label>
+                        <select name="items[{{ loop.index0 }}][is_recurring]" class="form-control">
+                            <option value="1" {% if item.is_recurring_item %}selected{% endif %}>🔄 Recurring</option>
+                            <option value="0" {% if not item.is_recurring_item %}selected{% endif %}>1️⃣ One-time</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Product/Service</label>
+                        <select name="items[{{ loop.index0 }}][product_id]" class="form-control product-select" onchange="fillProductDetails(this)">
+                            <option value="">Custom Item</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" 
+                                    data-price="{{ product.unit_price }}"
+                                    data-description="{{ product.name }}"
+                                    data-billing-term="{{ product.billing_term or '' }}"
+                                    data-taxable="{{ product.taxable }}"
+                                    {% if item.product_id == product.id %}selected{% endif %}>
+                                {{ product.name }} ({{ "%.2f"|format(product.unit_price) }})
+                                {% if product.billing_term %}[{{ product.billing_term|title }}]{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <label class="form-label">Description *</label>
+                        <input type="text" name="items[{{ loop.index0 }}][description]" class="form-control" value="{{ item.description }}" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Qty</label>
+                        <input type="number" name="items[{{ loop.index0 }}][quantity]" class="form-control" step="0.01" min="0.01" value="{{ item.quantity }}" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Price</label>
+                        <input type="number" name="items[{{ loop.index0 }}][unit_price]" class="form-control" step="0.01" min="0" value="{{ item.unit_price }}" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.3;">
+                        <label class="form-label">Tax %</label>
+                        <input type="number" name="items[{{ loop.index0 }}][tax_rate]" class="form-control" step="0.01" min="0" value="{{ item.tax_rate or 0 }}">
+                    </div>
+                    <div class="form-group" style="flex: 0.2; display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">🗑️</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="item-row" data-index="0">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Type</label>
+                        <select name="items[0][is_recurring]" class="form-control">
+                            <option value="1">🔄 Recurring</option>
+                            <option value="0">1️⃣ One-time</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Product/Service</label>
+                        <select name="items[0][product_id]" class="form-control product-select" onchange="fillProductDetails(this)">
+                            <option value="">Custom Item</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" 
+                                    data-price="{{ product.unit_price }}"
+                                    data-description="{{ product.name }}"
+                                    data-billing-term="{{ product.billing_term or '' }}"
+                                    data-taxable="{{ product.taxable }}">
+                                {{ product.name }} ({{ "%.2f"|format(product.unit_price) }})
+                                {% if product.billing_term %}[{{ product.billing_term|title }}]{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <label class="form-label">Description *</label>
+                        <input type="text" name="items[0][description]" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Qty</label>
+                        <input type="number" name="items[0][quantity]" class="form-control" step="0.01" min="0.01" value="1" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.5;">
+                        <label class="form-label">Price</label>
+                        <input type="number" name="items[0][unit_price]" class="form-control" step="0.01" min="0" value="0" required>
+                    </div>
+                    <div class="form-group" style="flex: 0.3;">
+                        <label class="form-label">Tax %</label>
+                        <input type="number" name="items[0][tax_rate]" class="form-control" step="0.01" min="0" value="0">
+                    </div>
+                    <div class="form-group" style="flex: 0.2; display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">🗑️</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <button type="button" class="btn btn-secondary mt-2" onclick="addItem()">➕ Add Item</button>
+        
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <p class="text-muted" style="margin: 0;">
+                <strong>🔄 Recurring items</strong> appear on every generated invoice.<br>
+                <strong>1️⃣ One-time items</strong> appear only on the first invoice, then are removed.
+            </p>
+        </div>
+    </div>
+    
+    <div class="flex gap-4">
+        <button type="submit" class="btn btn-primary">💾 {% if recurring %}Update{% else %}Create{% endif %} Recurring Invoice</button>
+        <a href="{{ url_for('recurring_invoices') }}" class="btn btn-secondary">Cancel</a>
+        {% if recurring %}
+        <form method="POST" action="{{ url_for('delete_recurring_invoice', recurring_id=recurring.id) }}" style="display: inline; margin-left: auto;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this recurring invoice?');">🗑️ Delete</button>
+        </form>
+        {% endif %}
+    </div>
+</form>
+
+<script>
+let itemIndex = {{ (recurring['items']|length) if recurring and recurring['items'] else 1 }};
+const defaultTaxRate = {{ settings.default_tax_rate|default(0)|float|int if settings else 20 }};
+
+function addItem() {
+    const container = document.getElementById('items-container');
+    const newItem = document.createElement('div');
+    newItem.className = 'item-row';
+    newItem.dataset.index = itemIndex;
+    newItem.innerHTML = `
+        <div class="form-row">
+            <div class="form-group" style="flex: 0.5;">
+                <label class="form-label">Type</label>
+                <select name="items[${itemIndex}][is_recurring]" class="form-control">
+                    <option value="1">🔄 Recurring</option>
+                    <option value="0">1️⃣ One-time</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label">Product/Service</label>
+                <select name="items[${itemIndex}][product_id]" class="form-control product-select" onchange="fillProductDetails(this)">
+                    <option value="">Custom Item</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" 
+                            data-price="{{ product.unit_price }}"
+                            data-description="{{ product.name }}"
+                            data-billing-term="{{ product.billing_term or '' }}"
+                            data-taxable="{{ product.taxable }}">
+                        {{ product.name }} ({{ "%.2f"|format(product.unit_price) }})
+                        {% if product.billing_term %}[{{ product.billing_term|title }}]{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label class="form-label">Description *</label>
+                <input type="text" name="items[${itemIndex}][description]" class="form-control" required>
+            </div>
+            <div class="form-group" style="flex: 0.5;">
+                <label class="form-label">Qty</label>
+                <input type="number" name="items[${itemIndex}][quantity]" class="form-control" step="0.01" min="0.01" value="1" required>
+            </div>
+            <div class="form-group" style="flex: 0.5;">
+                <label class="form-label">Price</label>
+                <input type="number" name="items[${itemIndex}][unit_price]" class="form-control" step="0.01" min="0" value="0" required>
+            </div>
+            <div class="form-group" style="flex: 0.3;">
+                <label class="form-label">Tax %</label>
+                <input type="number" name="items[${itemIndex}][tax_rate]" class="form-control" step="0.01" min="0" value="0">
+            </div>
+            <div class="form-group" style="flex: 0.2; display: flex; align-items: flex-end;">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">🗑️</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(newItem);
+    itemIndex++;
+}
+
+function removeItem(btn) {
+    const rows = document.querySelectorAll('.item-row');
+    if (rows.length > 1) {
+        btn.closest('.item-row').remove();
+    } else {
+        alert('You must have at least one item.');
+    }
+}
+
+function fillProductDetails(select) {
+    const row = select.closest('.item-row');
+    const option = select.options[select.selectedIndex];
+    
+    if (option.value) {
+        const price = option.dataset.price;
+        const description = option.dataset.description;
+        const isTaxable = option.dataset.taxable === '1';
+        
+        row.querySelector('input[name*="[description]"]').value = description;
+        row.querySelector('input[name*="[unit_price]"]').value = price;
+        
+        // Auto-fill tax rate if product is taxable
+        const taxInput = row.querySelector('input[name*="[tax_rate]"]');
+        if (isTaxable && defaultTaxRate > 0) {
+            taxInput.value = defaultTaxRate;
+        }
+    }
+}
+</script>
+
+<style>
+.item-row {
+    background: var(--bg-dark);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+}
+</style>
+{% endblock %}

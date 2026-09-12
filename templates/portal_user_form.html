@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Add Portal User - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🌐 Add Portal User</h1>
+    <p class="page-subtitle">Create portal access for a customer</p>
+</div>
+
+<div class="panel" style="max-width: 600px;">
+    <form method="POST" action="{{ url_for('create_portal_user') }}">
+        <div class="form-group">
+            <label class="form-label" for="customer_id">Customer *</label>
+            <select id="customer_id" name="customer_id" class="form-control" required>
+                <option value="">Select a customer...</option>
+                {% for customer in customers %}
+                    {% if customer.id not in existing_customer_ids %}
+                    <option value="{{ customer.id }}" data-email="{{ customer.email }}">
+                        {{ customer.name }}{% if customer.company %} ({{ customer.company }}){% endif %}
+                    </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <small class="text-muted">Only customers without existing portal access are shown</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="email">Portal Login Email *</label>
+            <input type="email" id="email" name="email" class="form-control" required
+                   placeholder="customer@example.com">
+            <small class="text-muted">This email will be used to log into the portal</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="send_email" value="1" checked>
+                <span>Send welcome email with login details</span>
+            </label>
+        </div>
+        
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">Create Portal User</button>
+            <a href="{{ url_for('portal_users') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('customer_id').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const email = option.dataset.email;
+    if (email) {
+        document.getElementById('email').value = email;
+    }
+});
+</script>
+{% endblock %}

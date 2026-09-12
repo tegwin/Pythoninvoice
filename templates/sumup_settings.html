@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}SumUp Integration - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">💳 SumUp Integration</h1>
+    <p class="page-subtitle">Accept card payments online</p>
+</div>
+
+<div class="panel mb-4">
+    <a href="{{ url_for('integrations') }}" class="btn btn-secondary">← Back to Integrations</a>
+</div>
+
+<!-- Conflict Warning -->
+{% if stripe_enabled and not show_disable_confirmation %}
+<div class="panel mb-4" style="background: var(--accent-yellow)22; border-left: 4px solid var(--accent-yellow);">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-yellow);">Stripe is Currently Active</strong>
+            <p class="text-muted" style="margin: 0;">
+                Only one card payment provider can be active at a time. 
+                Enabling SumUp will automatically disable Stripe.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Confirmation Dialog -->
+{% if show_disable_confirmation %}
+<div class="panel mb-4" style="background: var(--accent-red)22; border-left: 4px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">🔄</span>
+        <div style="flex: 1;">
+            <strong style="color: var(--accent-red);">Disable Stripe and Enable SumUp?</strong>
+            <p class="text-muted" style="margin: 0.5rem 0;">
+                Stripe is currently active. Only one card payment provider can be enabled at a time.
+                Would you like to disable Stripe and enable SumUp instead?
+            </p>
+            <div class="flex gap-2" style="margin-top: 1rem;">
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="enabled" value="1">
+                    <input type="hidden" name="disable_other_provider" value="1">
+                    <!-- Preserve other settings -->
+                    <input type="hidden" name="api_key" value="{{ sumup_settings.api_key or '' }}">
+                    <input type="hidden" name="merchant_code" value="{{ sumup_settings.merchant_code or '' }}">
+                    <input type="hidden" name="include_in_invoice_pdf" value="{{ '1' if sumup_settings.include_in_invoice_pdf else '0' }}">
+                    <input type="hidden" name="include_in_email" value="{{ '1' if sumup_settings.include_in_email else '0' }}">
+                    <input type="hidden" name="payment_description" value="{{ sumup_settings.payment_description or 'Invoice Payment' }}">
+                    <button type="submit" class="btn btn-primary">✅ Yes, Disable Stripe & Enable SumUp</button>
+                </form>
+                <a href="{{ url_for('sumup_settings') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Status Banner -->
+{% if sumup_settings.enabled and is_configured %}
+<div class="panel mb-4" style="background: linear-gradient(135deg, #0070e011, #0070e022); border-left: 4px solid #0070e0;">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">✅</span>
+        <div>
+            <strong style="color: #0070e0;">SumUp is Active</strong>
+            <p class="text-muted" style="margin: 0;">
+                Merchant Code: <code>{{ sumup_settings.merchant_code }}</code>
+            </p>
+        </div>
+    </div>
+</div>
+{% elif sumup_settings.enabled and not is_configured %}
+<div class="panel mb-4" style="background: var(--accent-red)22; border-left: 4px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: center;">
+        <span style="font-size: 2rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-red);">Configuration Incomplete</strong>
+            <p class="text-muted" style="margin: 0;">Please add your API key and Merchant Code below.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<form method="POST">
+    <!-- Enable/Disable -->
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">🔌 Enable SumUp</h3>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="enabled" value="1" 
+                       {% if sumup_settings.enabled %}checked{% endif %}
+                       onchange="toggleSettings(this)">
+                <span>Enable SumUp payments</span>
+            </label>
+            {% if stripe_enabled %}
+            <small class="text-muted" style="display: block; margin-top: 0.5rem; color: var(--accent-yellow);">
+                ⚠️ Enabling SumUp will automatically disable Stripe
+            </small>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div id="sumup-settings" style="{% if not sumup_settings.enabled %}opacity: 0.5; pointer-events: none;{% endif %}">
+        
+        <!-- API Credentials -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🔑 API Credentials</h3>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">
+                Get your API key from 
+                <a href="https://me.sumup.com/settings/developer" target="_blank" style="color: var(--accent-yellow);">
+                    SumUp Dashboard → Settings → Developer
+                </a>
+            </p>
+            
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input type="password" name="api_key" class="form-control" 
+                       value="{{ sumup_settings.api_key or '' }}"
+                       placeholder="sup_sk_...">
+                <small class="text-muted">Your secret API key</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Merchant Code</label>
+                <input type="text" name="merchant_code" class="form-control" 
+                       value="{{ sumup_settings.merchant_code or '' }}"
+                       placeholder="MXXXXXXXX">
+                <small class="text-muted">Found in your SumUp dashboard profile</small>
+            </div>
+        </div>
+        
+        <!-- Display Options -->
+        <div class="panel mb-4">
+            <h3 class="section-title" style="margin-top: 0;">🎨 Display Options</h3>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_email" value="1" 
+                           {% if sumup_settings.include_in_email != 0 %}checked{% endif %}>
+                    <span>Include SumUp payment link in invoice emails</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="include_in_invoice_pdf" value="1" 
+                           {% if sumup_settings.include_in_invoice_pdf != 0 %}checked{% endif %}>
+                    <span>Include SumUp payment info in invoice PDF</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Payment Description</label>
+                <input type="text" name="payment_description" class="form-control" 
+                       value="{{ sumup_settings.payment_description or 'Invoice Payment' }}"
+                       placeholder="Invoice Payment">
+                <small class="text-muted">Description shown to customer during checkout</small>
+            </div>
+        </div>
+        
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-lg">💾 Save SumUp Settings</button>
+</form>
+
+<!-- How It Works -->
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 How SumUp Payments Work</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">1️⃣</div>
+            <strong>Create Checkout</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Click "Pay with Card" on the invoice
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">2️⃣</div>
+            <strong>Enter Card Details</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Secure SumUp widget collects payment info
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">3️⃣</div>
+            <strong>3DS Authentication</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Customer verifies with their bank
+            </p>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">4️⃣</div>
+            <strong>Payment Confirmed</strong>
+            <p class="text-muted" style="font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                Invoice automatically marked as paid
+            </p>
+        </div>
+    </div>
+    
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 1.5rem;">
+        <p class="text-muted" style="margin: 0;">
+            🔒 <strong>PCI Compliant:</strong> Card details are handled entirely by SumUp's secure Payment Widget. 
+            No card data ever touches your server.
+        </p>
+    </div>
+</div>
+
+<!-- Recent Payments -->
+{% if webhook_logs %}
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📜 Recent Payment Events</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Invoice</th>
+                <th>Status</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in webhook_logs %}
+            <tr>
+                <td style="font-size: 0.85rem;">{{ log.received_at.strftime('%Y-%m-%d %H:%M') if log.received_at else 'N/A' }}</td>
+                <td><code style="font-size: 0.8rem;">{{ log.event_type }}</code></td>
+                <td>
+                    {% if log.invoice_id %}
+                    <a href="{{ url_for('view_invoice', invoice_id=log.invoice_id) }}">#{{ log.invoice_id }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if log.status == 'success' %}
+                    <span class="badge badge-paid">Success</span>
+                    {% else %}
+                    <span class="badge badge-overdue">{{ log.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.85rem;">{{ log.message }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<script>
+function toggleSettings(checkbox) {
+    const settings = document.getElementById('sumup-settings');
+    if (checkbox.checked) {
+        settings.style.opacity = '1';
+        settings.style.pointerEvents = 'auto';
+    } else {
+        settings.style.opacity = '0.5';
+        settings.style.pointerEvents = 'none';
+    }
+}
+</script>
+{% endblock %}

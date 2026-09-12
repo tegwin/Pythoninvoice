@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Bills - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 Bills</h1>
+    <a href="{{ url_for('new_bill') }}" class="btn btn-primary">+ New Bill</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid mb-4">
+    <div class="stat-card">
+        <div class="stat-value">{{ summary.draft_count or 0 }}</div>
+        <div class="stat-label">Draft</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-yellow">{{ summary.approved_count or 0 }}</div>
+        <div class="stat-label">To Pay</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-green">{{ summary.paid_count or 0 }}</div>
+        <div class="stat-label">Paid</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-red">{{ currency_symbol }}{{ "%.2f"|format(summary.total_overdue or 0) }}</div>
+        <div class="stat-label">Overdue</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="panel mb-4">
+    <form method="GET" class="flex gap-4" style="flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if request.args.get('status') == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="approved" {% if request.args.get('status') == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="partial" {% if request.args.get('status') == 'partial' %}selected{% endif %}>Partially Paid</option>
+                <option value="paid" {% if request.args.get('status') == 'paid' %}selected{% endif %}>Paid</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Supplier</label>
+            <select name="supplier_id" class="form-control" onchange="this.form.submit()">
+                <option value="">All Suppliers</option>
+                {% for supplier in suppliers %}
+                <option value="{{ supplier.id }}" {% if request.args.get('supplier_id')|int == supplier.id %}selected{% endif %}>
+                    {{ supplier.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if request.args.get('status') or request.args.get('supplier_id') %}
+        <a href="{{ url_for('bills') }}" class="btn btn-secondary">Clear Filters</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="panel">
+    {% if bills %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Bill #</th>
+                <th>Supplier</th>
+                <th>Date</th>
+                <th>Due Date</th>
+                <th>Total</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in bills %}
+            {% set balance = (bill.total or 0) - (bill.amount_paid or 0) %}
+            {% set is_overdue = bill.due_date and bill.due_date < today and bill.status not in ['paid', 'cancelled'] %}
+            <tr {% if is_overdue %}style="background: var(--accent-red)11;"{% endif %}>
+                <td><strong>{{ bill.bill_number }}</strong></td>
+                <td>{{ bill.supplier_name or '-' }}</td>
+                <td>{{ bill.bill_date }}</td>
+                <td>
+                    {{ bill.due_date or '-' }}
+                    {% if is_overdue %}
+                    <span class="badge badge-overdue" style="margin-left: 0.5rem;">Overdue</span>
+                    {% endif %}
+                </td>
+                <td>{{ currency_symbol }}{{ "%.2f"|format(bill.total or 0) }}</td>
+                <td>
+                    {% if balance > 0 %}
+                    <span class="text-red">{{ currency_symbol }}{{ "%.2f"|format(balance) }}</span>
+                    {% else %}
+                    <span class="text-green">{{ currency_symbol }}0.00</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-{{ bill.status }}">{{ bill.status|title }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('view_bill', bill_id=bill.id) }}" class="btn btn-secondary btn-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📥</div>
+        <div class="empty-state-title">No bills yet</div>
+        <p class="text-muted">Record bills from your suppliers to track what you owe.</p>
+        <a href="{{ url_for('new_bill') }}" class="btn btn-primary">+ Add Bill</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

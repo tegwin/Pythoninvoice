@@ -1,0 +1,133 @@
+{% extends "portal_base.html" %}
+
+{% block title %}Dashboard - Customer Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">👋 Welcome, {{ portal_user.customer_name }}</h1>
+    <p class="page-subtitle">Here's an overview of your account with {{ business_info.company_name }}</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card highlight">
+        <div class="stat-label">Total Outstanding</div>
+        <div class="stat-value">{{ currency_symbol }}{{ "%.2f"|format(stats.total_outstanding) }}</div>
+    </div>
+    
+    <div class="stat-card {% if stats.overdue_invoices > 0 %}danger{% endif %}">
+        <div class="stat-label">Overdue Amount</div>
+        <div class="stat-value">{{ currency_symbol }}{{ "%.2f"|format(stats.overdue_amount) }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">Unpaid Invoices</div>
+        <div class="stat-value">{{ stats.unpaid_invoices }}</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-label">Paid Invoices</div>
+        <div class="stat-value">{{ stats.paid_invoices }}</div>
+    </div>
+</div>
+
+<!-- Recent Unpaid Invoices -->
+<div class="panel">
+    <h2 class="panel-title">📄 Invoices Requiring Attention</h2>
+    
+    {% if unpaid_invoices %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in unpaid_invoices[:5] %}
+                <tr>
+                    <td><a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoice.id) }}" style="color: var(--accent-blue); text-decoration: none;">{{ invoice.invoice_number }}</a></td>
+                    <td>{{ invoice.issue_date.strftime('%d %b %Y') if invoice.issue_date else '' }}</td>
+                    <td>
+                        {% if invoice.due_date %}
+                            {% set today = now.date() if now else none %}
+                            {% set due = invoice.due_date if invoice.due_date is not string else invoice.due_date %}
+                            <span style="{% if due < today %}color: var(--accent-red);{% endif %}">
+                                {{ invoice.due_date.strftime('%d %b %Y') if invoice.due_date else '' }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>{{ currency_symbol }}{{ "%.2f"|format(invoice.total) }}</td>
+                    <td><strong>{{ currency_symbol }}{{ "%.2f"|format(invoice.balance) }}</strong></td>
+                    <td>
+                        {% if invoice.status == 'overdue' or (invoice.due_date and invoice.due_date < now.date()) %}
+                            <span class="badge badge-overdue">Overdue</span>
+                        {% elif invoice.status == 'partial' %}
+                            <span class="badge badge-partial">Partial</span>
+                        {% else %}
+                            <span class="badge badge-unpaid">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('portal.portal_invoice_detail', invoice_id=invoice.id) }}" class="btn btn-success btn-sm">Pay Now</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if unpaid_invoices|length > 5 %}
+    <div style="margin-top: 1rem; text-align: center;">
+        <a href="{{ url_for('portal.portal_invoices', filter='unpaid') }}" class="btn btn-secondary">View All Unpaid Invoices ({{ stats.unpaid_invoices }})</a>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+        🎉 You're all caught up! No outstanding invoices.
+    </p>
+    {% endif %}
+</div>
+
+<!-- Quick Actions -->
+<div class="panel">
+    <h2 class="panel-title">⚡ Quick Actions</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{{ url_for('portal.portal_invoices') }}" class="btn btn-secondary">📄 View All Invoices</a>
+        <a href="{{ url_for('portal.portal_invoices', filter='unpaid') }}" class="btn btn-primary">💳 Pay Outstanding</a>
+        <a href="{{ url_for('portal.portal_account') }}" class="btn btn-secondary">👤 My Account</a>
+    </div>
+</div>
+
+<!-- Business Contact Info -->
+<div class="panel">
+    <h2 class="panel-title">📞 Contact {{ business_info.company_name }}</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        {% if business_info.email %}
+        <div>
+            <div style="color: var(--text-secondary); font-size: 0.85rem;">Email</div>
+            <div><a href="mailto:{{ business_info.email }}" style="color: var(--accent-blue);">{{ business_info.email }}</a></div>
+        </div>
+        {% endif %}
+        {% if business_info.phone %}
+        <div>
+            <div style="color: var(--text-secondary); font-size: 0.85rem;">Phone</div>
+            <div>{{ business_info.phone }}</div>
+        </div>
+        {% endif %}
+        {% if business_info.address %}
+        <div>
+            <div style="color: var(--text-secondary); font-size: 0.85rem;">Address</div>
+            <div>{{ business_info.address }}{% if business_info.city %}, {{ business_info.city }}{% endif %} {% if business_info.postcode %}{{ business_info.postcode }}{% endif %}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Factor Authentication - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">🛡️</div>
+            <h1>Two-Factor Authentication</h1>
+            <p class="text-muted">Enter the code from your authenticator app</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('verify_2fa_login') }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <input type="hidden" name="remember" value="{{ remember }}">
+            
+            <div class="form-group">
+                <label class="form-label" for="totp_code">Authentication Code</label>
+                <input type="text" id="totp_code" name="totp_code" class="form-control totp-input" 
+                       required maxlength="6" pattern="[0-9]{6}" placeholder="000000"
+                       autocomplete="one-time-code" inputmode="numeric" autofocus>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">🔐 Verify</button>
+        </form>
+        
+        <div class="auth-divider">
+            <span>or</span>
+        </div>
+        
+        <form method="POST" action="{{ url_for('verify_backup_code') }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <input type="hidden" name="remember" value="{{ remember }}">
+            
+            <div class="form-group">
+                <label class="form-label" for="backup_code">Use a Backup Code</label>
+                <input type="text" id="backup_code" name="backup_code" class="form-control" 
+                       maxlength="10" placeholder="XXXX-XXXX">
+            </div>
+            
+            <button type="submit" class="btn btn-secondary btn-block">Use Backup Code</button>
+        </form>
+        
+        <div class="auth-footer">
+            <a href="{{ url_for('login') }}">← Back to Login</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.totp-input {
+    font-size: 2rem;
+    text-align: center;
+    letter-spacing: 0.5rem;
+    font-family: monospace;
+}
+
+.auth-divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+
+.auth-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-top: 1px solid var(--border);
+}
+
+.auth-divider span {
+    background: var(--bg-card);
+    padding: 0 1rem;
+    position: relative;
+    color: var(--text-secondary);
+}
+
+.btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.auth-footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    color: var(--accent-yellow);
+}
+</style>
+
+<script>
+// Auto-format TOTP input
+document.getElementById('totp_code').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+});
+
+// Auto-format backup code
+document.getElementById('backup_code').addEventListener('input', function(e) {
+    let value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (value.length > 4) {
+        value = value.slice(0, 4) + '-' + value.slice(4, 8);
+    }
+    this.value = value;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Webhooks - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🔔 Webhooks</h1>
+    <p class="page-subtitle">Receive notifications when events happen</p>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">Create New Webhook</h3>
+    <form method="POST" action="{{ url_for('create_webhook_route') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="name">Webhook Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="My Webhook">
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="url">Webhook URL</label>
+                <input type="url" id="url" name="url" class="form-control" placeholder="https://your-server.com/webhook" required>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Events to Subscribe</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+                {% for event in webhook_events %}
+                <label class="form-check" style="padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                    <input type="checkbox" name="events" value="{{ event }}">
+                    <span style="font-size: 0.9rem;">{{ event }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Authentication (Optional)</label>
+            <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+                <div class="form-row">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="auth_type">Auth Type</label>
+                        <select id="auth_type" name="auth_type" class="form-control">
+                            <option value="">None</option>
+                            <option value="bearer">Bearer Token</option>
+                            <option value="api_key">API Key (X-API-Key)</option>
+                            <option value="basic">Basic Auth</option>
+                            <option value="custom_header">Custom Header</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                        <label class="form-label" for="auth_value">Auth Value</label>
+                        <input type="text" id="auth_value" name="auth_value" class="form-control" placeholder="Token or credentials">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">🔔 Create Webhook</button>
+    </form>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 Webhook Documentation</h3>
+    
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <h4 style="color: var(--accent-yellow); margin-bottom: 0.5rem;">Webhook Payload</h4>
+        <pre style="background: var(--bg-light); padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;">{
+  "event": "invoice.paid",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "webhook_id": "abc123",
+  "data": { ... }
+}</pre>
+    </div>
+    
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+        <h4 style="color: var(--accent-blue); margin-bottom: 0.5rem;">Available Events</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+            <div><code>invoice.created</code></div>
+            <div><code>invoice.updated</code></div>
+            <div><code>invoice.paid</code></div>
+            <div><code>invoice.partially_paid</code></div>
+            <div><code>customer.created</code></div>
+            <div><code>customer.updated</code></div>
+            <div><code>product.created</code></div>
+            <div><code>payment.received</code></div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Your Webhooks</h3>
+    
+    {% if webhooks %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for webhook in webhooks %}
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid {% if webhook.active %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div>
+                    <h4 style="margin: 0 0 0.25rem 0;">{{ webhook.name or 'Unnamed Webhook' }}</h4>
+                    <code style="font-size: 0.85rem; color: var(--text-secondary);">{{ webhook.url }}</code>
+                </div>
+                <div class="flex gap-2">
+                    {% if webhook.active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-medium); border-radius: 6px;">
+                <strong style="font-size: 0.85rem; color: var(--text-secondary);">Secret:</strong>
+                <code style="margin-left: 0.5rem; font-size: 0.8rem;">{{ webhook.secret }}</code>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <strong style="font-size: 0.85rem; color: var(--text-secondary);">Events:</strong>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem;">
+                    {% for event in webhook.events %}
+                    <span class="badge badge-draft">{{ event }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; font-size: 0.85rem;">
+                <div>
+                    <span class="text-muted">Triggers:</span> {{ webhook.trigger_count or 0 }}
+                </div>
+                <div>
+                    <span class="text-muted">Last Status:</span>
+                    {% if webhook.last_status %}
+                    <span style="color: {% if webhook.last_status >= 200 and webhook.last_status < 300 %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+                        {{ webhook.last_status }}
+                    </span>
+                    {% else %}N/A{% endif %}
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" 
+                    data-webhook-id="{{ webhook.webhook_id }}"
+                    data-webhook-name="{{ webhook.name or '' }}"
+                    data-webhook-url="{{ webhook.url }}"
+                    data-webhook-events='{{ webhook.events | tojson }}'
+                    onclick="editWebhookFromButton(this)">✏️ Edit</button>
+                <form method="POST" action="{{ url_for('test_webhook_route', webhook_id=webhook.webhook_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary btn-sm">🧪 Test</button>
+                </form>
+                <form method="POST" action="{{ url_for('delete_webhook_route', webhook_id=webhook.webhook_id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this webhook?');">🗑️ Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔔</div>
+        <h3 class="empty-state-title">No Webhooks</h3>
+        <p>Create your first webhook to receive notifications.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Webhook Modal -->
+<div id="editWebhookModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); border-radius: 12px; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">✏️ Edit Webhook</h3>
+        <form method="POST" id="editWebhookForm" action="">
+            <input type="hidden" name="webhook_id" id="edit_webhook_id">
+            
+            <div class="form-group">
+                <label class="form-label" for="edit_name">Webhook Name</label>
+                <input type="text" id="edit_name" name="name" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="edit_url">Webhook URL</label>
+                <input type="url" id="edit_url" name="url" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Events to Subscribe</label>
+                <div id="edit_events" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+                    {% for event in webhook_events %}
+                    <label class="form-check" style="padding: 0.5rem; background: var(--bg-dark); border-radius: 6px;">
+                        <input type="checkbox" name="events" value="{{ event }}" id="edit_event_{{ event | replace('.', '_') }}">
+                        <span style="font-size: 0.85rem;">{{ event }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="flex gap-2" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('settings') }}" class="btn btn-secondary">← Back to Settings</a>
+    <a href="{{ url_for('api_keys') }}" class="btn btn-secondary">🔑 Manage API Keys</a>
+</div>
+
+<script>
+function editWebhookFromButton(btn) {
+    const webhookId = btn.getAttribute('data-webhook-id');
+    const name = btn.getAttribute('data-webhook-name');
+    const url = btn.getAttribute('data-webhook-url');
+    let events = [];
+    try {
+        events = JSON.parse(btn.getAttribute('data-webhook-events') || '[]');
+    } catch(e) {
+        console.error('Failed to parse events:', e);
+    }
+    
+    document.getElementById('edit_webhook_id').value = webhookId;
+    document.getElementById('edit_name').value = name || '';
+    document.getElementById('edit_url').value = url || '';
+    document.getElementById('editWebhookForm').action = '/settings/webhooks/' + webhookId + '/edit';
+    
+    // Uncheck all events first
+    document.querySelectorAll('#edit_events input[type="checkbox"]').forEach(cb => cb.checked = false);
+    
+    // Check the events for this webhook
+    if (events && Array.isArray(events)) {
+        events.forEach(event => {
+            const checkbox = document.getElementById('edit_event_' + event.replace(/\./g, '_'));
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    document.getElementById('editWebhookModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editWebhookModal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('editWebhookModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+{% endblock %}

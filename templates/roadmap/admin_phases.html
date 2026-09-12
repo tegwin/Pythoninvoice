@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Phases - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📋 Manage Phases</h1>
+    <p class="page-subtitle">Organize your roadmap into phases</p>
+</div>
+
+<div class="panel mb-4">
+    <h3 style="margin-top: 0;">➕ Add New Phase</h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="add">
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+                <label class="form-label">Phase Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="e.g., Q2 2026 - Planned">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Date</label>
+                <input type="date" name="target_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="planned">Planned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Color</label>
+                <input type="color" name="color" class="form-control" value="#3b82f6" style="height: 42px; padding: 4px;">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" name="description" class="form-control" placeholder="Brief description of this phase">
+        </div>
+        <button type="submit" class="btn btn-primary">➕ Add Phase</button>
+    </form>
+</div>
+
+<div class="panel">
+    <h3 style="margin-top: 0;">📋 Existing Phases</h3>
+    
+    {% if phases %}
+    {% for phase in phases %}
+    <div class="phase-edit-item" style="border-left-color: {{ phase.color }};">
+        <form method="POST">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="phase_id" value="{{ phase.id }}">
+            
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <input type="text" name="name" class="form-control" value="{{ phase.name }}" required>
+                </div>
+                <div class="form-group">
+                    <input type="date" name="target_date" class="form-control" value="{{ phase.target_date or '' }}">
+                </div>
+                <div class="form-group">
+                    <select name="status" class="form-control">
+                        <option value="planned" {% if phase.status == 'planned' %}selected{% endif %}>Planned</option>
+                        <option value="in_progress" {% if phase.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if phase.status == 'completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="color" name="color" class="form-control" value="{{ phase.color }}" style="height: 42px; padding: 4px;">
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="text" name="description" class="form-control" value="{{ phase.description or '' }}" placeholder="Description">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-secondary btn-sm">💾 Save</button>
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" 
+                        onclick="return confirm('Delete this phase and all its features?');">🗑️ Delete</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted">No phases yet. Add one above!</p>
+    {% endif %}
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('roadmap.admin_dashboard') }}" class="btn btn-secondary">← Back to Roadmap Admin</a>
+</div>
+
+<style>
+.form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.phase-edit-item {
+    background: var(--bg-light);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--accent-blue);
+}
+</style>
+{% endblock %}

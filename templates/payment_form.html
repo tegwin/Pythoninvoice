@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Record Payment - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">💳 Record Payment</h1>
+    <p class="page-subtitle">Invoice {{ invoice.invoice_number }} - {{ invoice.customer_name or 'No customer' }}</p>
+</div>
+
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="stat-card">
+        <div class="stat-value green">{{ currency_symbol }}{{ "%.2f"|format(invoice.total or 0) }}</div>
+        <div class="stat-label">Invoice Total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value blue">{{ currency_symbol }}{{ "%.2f"|format(invoice.amount_paid or 0) }}</div>
+        <div class="stat-label">Already Paid</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value yellow">{{ currency_symbol }}{{ "%.2f"|format(amount_due) }}</div>
+        <div class="stat-label">Amount Due</div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Payment Details</h3>
+    
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="amount">Amount ({{ currency_symbol }})</label>
+                <input type="number" id="amount" name="amount" class="form-control" 
+                       step="0.01" min="0.01" max="{{ amount_due }}"
+                       value="{{ amount_due }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="payment_method">Payment Method</label>
+                <select id="payment_method" name="payment_method" class="form-control">
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="PayPal">PayPal</option>
+                    <option value="Stripe">Stripe</option>
+                    <option value="Check">Check</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="reference">Reference / Transaction ID</label>
+            <input type="text" id="reference" name="reference" class="form-control" 
+                   placeholder="e.g., Transaction ID, Check number">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" placeholder="Optional notes about this payment"></textarea>
+        </div>
+        
+        <div class="flex gap-4">
+            <button type="submit" class="btn btn-success">💳 Record Payment</button>
+            <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

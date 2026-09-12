@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Customer Management - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">👥 Bulk Customer Management</h1>
+    <p class="page-subtitle">Edit, delete, or export multiple customers at once</p>
+</div>
+
+<form method="POST" action="{{ url_for('bulk_customers_action') }}" id="bulk-form">
+    <div class="panel mb-4">
+        <div class="flex gap-4 flex-wrap" style="align-items: center;">
+            <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+                <select name="action" id="bulk-action" class="form-control" required>
+                    <option value="">-- Select Action --</option>
+                    <option value="export">📥 Export Selected to CSV</option>
+                    <option value="update_country">Update Country</option>
+                    <option value="update_tax">Update Tax Rate</option>
+                    <option value="update_currency">Update Currency</option>
+                    <option value="update_payment_terms">Update Payment Terms</option>
+                    <option value="delete">🗑️ Delete Selected</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0; display: none;" id="country-group">
+                <select name="country" class="form-control" style="width: 200px;">
+                    <option value="">-- Select Country --</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="United States">United States</option>
+                    <option value="South Africa">South Africa</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Australia">Australia</option>
+                    <option value="New Zealand">New Zealand</option>
+                    <option value="Ireland">Ireland</option>
+                    <option value="Germany">Germany</option>
+                    <option value="France">France</option>
+                    <option value="Netherlands">Netherlands</option>
+                    <option value="Belgium">Belgium</option>
+                    <option value="Switzerland">Switzerland</option>
+                    <option value="Spain">Spain</option>
+                    <option value="Italy">Italy</option>
+                    <option value="India">India</option>
+                    <option value="Japan">Japan</option>
+                    <option value="Singapore">Singapore</option>
+                    <option value="United Arab Emirates">United Arab Emirates</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0; display: none;" id="tax-group">
+                <input type="number" name="tax_rate" class="form-control" placeholder="Tax Rate %" step="0.01" min="0" max="100" style="width: 120px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0; display: none;" id="currency-group">
+                <select name="currency" class="form-control" style="width: 120px;">
+                    <option value="">-- Select --</option>
+                    {% for code, name in CURRENCIES.items() %}
+                    <option value="{{ code }}">{{ code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0; display: none;" id="payment-terms-group">
+                <input type="text" name="payment_terms" class="form-control" placeholder="Payment terms..." style="width: 300px;">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="apply-btn" disabled>Apply to Selected</button>
+            
+            <div style="margin-left: auto;">
+                <span id="selected-count">0</span> customer(s) selected
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <div class="flex gap-4 mb-4" style="align-items: center;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-check">
+                    <input type="checkbox" id="select-all">
+                    <span>Select All</span>
+                </label>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <input type="text" id="filter-search" class="form-control" placeholder="Search customers..." style="width: 250px;">
+            </div>
+            
+            <div style="margin-left: auto; font-size: 0.9rem; color: var(--text-secondary);">
+                {{ customers|length }} total customers
+            </div>
+        </div>
+        
+        {% if customers %}
+        <table class="data-table" id="customers-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Tax Rate</th>
+                    <th>Currency</th>
+                    <th>Invoices</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cust in customers %}
+                <tr data-name="{{ cust.name|lower }}">
+                    <td>
+                        <input type="checkbox" name="customer_ids" value="{{ cust.id }}" class="customer-checkbox">
+                    </td>
+                    <td><strong>{{ cust.name }}</strong></td>
+                    <td>{{ cust.email or '-' }}</td>
+                    <td>{{ cust.country or '-' }}</td>
+                    <td>{{ cust.custom_tax_rate if cust.custom_tax_rate is not none else 'Default' }}{% if cust.custom_tax_rate is not none %}%{% endif %}</td>
+                    <td>{{ cust.custom_currency or 'Default' }}</td>
+                    <td>{{ cust.invoice_count or 0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <h3 class="empty-state-title">No Customers</h3>
+            <p>Create some customers first.</p>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<div class="mt-4">
+    <a href="{{ url_for('customers') }}" class="btn btn-secondary">← Back to Customers</a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    const selectedCount = document.getElementById('selected-count');
+    const applyBtn = document.getElementById('apply-btn');
+    const bulkAction = document.getElementById('bulk-action');
+    const filterSearch = document.getElementById('filter-search');
+    const table = document.getElementById('customers-table');
+    
+    const countryGroup = document.getElementById('country-group');
+    const taxGroup = document.getElementById('tax-group');
+    const currencyGroup = document.getElementById('currency-group');
+    const paymentTermsGroup = document.getElementById('payment-terms-group');
+    
+    function updateCount() {
+        const checked = document.querySelectorAll('.customer-checkbox:checked').length;
+        selectedCount.textContent = checked;
+        applyBtn.disabled = checked === 0 || !bulkAction.value;
+    }
+    
+    selectAll.addEventListener('change', function() {
+        const visibleRows = table.querySelectorAll('tbody tr:not([style*="display: none"])');
+        visibleRows.forEach(row => {
+            const cb = row.querySelector('.customer-checkbox');
+            if (cb) cb.checked = this.checked;
+        });
+        updateCount();
+    });
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateCount);
+    });
+    
+    bulkAction.addEventListener('change', function() {
+        // Hide all option groups
+        countryGroup.style.display = 'none';
+        taxGroup.style.display = 'none';
+        currencyGroup.style.display = 'none';
+        paymentTermsGroup.style.display = 'none';
+        
+        // Show relevant group
+        switch(this.value) {
+            case 'update_country':
+                countryGroup.style.display = 'block';
+                break;
+            case 'update_tax':
+                taxGroup.style.display = 'block';
+                break;
+            case 'update_currency':
+                currencyGroup.style.display = 'block';
+                break;
+            case 'update_payment_terms':
+                paymentTermsGroup.style.display = 'block';
+                break;
+        }
+        
+        updateCount();
+        
+        if (this.value === 'delete') {
+            applyBtn.classList.add('btn-danger');
+            applyBtn.classList.remove('btn-primary');
+            applyBtn.textContent = '🗑️ Delete Selected';
+        } else if (this.value === 'export') {
+            applyBtn.classList.remove('btn-danger');
+            applyBtn.classList.add('btn-success');
+            applyBtn.textContent = '📥 Export Selected';
+        } else {
+            applyBtn.classList.remove('btn-danger');
+            applyBtn.classList.remove('btn-success');
+            applyBtn.classList.add('btn-primary');
+            applyBtn.textContent = 'Apply to Selected';
+        }
+    });
+    
+    filterSearch.addEventListener('input', function() {
+        const search = this.value.toLowerCase();
+        const rows = table.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+            if (!search || row.dataset.name.includes(search)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+                row.querySelector('.customer-checkbox').checked = false;
+            }
+        });
+        
+        selectAll.checked = false;
+        updateCount();
+    });
+    
+    document.getElementById('bulk-form').addEventListener('submit', function(e) {
+        const action = bulkAction.value;
+        const checked = document.querySelectorAll('.customer-checkbox:checked').length;
+        
+        if (action === 'delete') {
+            if (!confirm(`Are you sure you want to delete ${checked} customer(s)? This will also delete their invoices. This cannot be undone.`)) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

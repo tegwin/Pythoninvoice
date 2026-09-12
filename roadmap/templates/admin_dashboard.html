@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>⚙️ Admin Dashboard</h1>
+    <p>Manage your product roadmap</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ phases|length }}</div>
+        <div class="stat-label">Phases</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ feature_count }}</div>
+        <div class="stat-label">Features</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ pending_requests }}</div>
+        <div class="stat-label">Pending Requests</div>
+    </div>
+</div>
+
+<div class="admin-nav">
+    <a href="{{ url_for('admin_phases') }}" class="admin-nav-item">
+        <div class="admin-nav-icon">📋</div>
+        <div class="admin-nav-content">
+            <h3>Manage Phases</h3>
+            <p>Add, edit, or remove roadmap phases</p>
+        </div>
+    </a>
+    
+    <a href="{{ url_for('admin_features') }}" class="admin-nav-item">
+        <div class="admin-nav-icon">✨</div>
+        <div class="admin-nav-content">
+            <h3>Manage Features</h3>
+            <p>Add, edit, or remove features</p>
+        </div>
+    </a>
+    
+    <a href="{{ url_for('admin_requests') }}" class="admin-nav-item">
+        <div class="admin-nav-icon">📥</div>
+        <div class="admin-nav-content">
+            <h3>Feature Requests</h3>
+            <p>Review and approve user requests</p>
+            {% if pending_requests > 0 %}
+            <span class="badge badge-pending">{{ pending_requests }} pending</span>
+            {% endif %}
+        </div>
+    </a>
+    
+    <a href="{{ url_for('admin_settings') }}" class="admin-nav-item">
+        <div class="admin-nav-icon">🔧</div>
+        <div class="admin-nav-content">
+            <h3>Settings</h3>
+            <p>Change password and preferences</p>
+        </div>
+    </a>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">← View Public Roadmap</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.admin-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.admin-nav-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    border: 1px solid var(--border);
+}
+
+.admin-nav-item:hover {
+    border-color: var(--accent-blue);
+    transform: translateY(-2px);
+}
+
+.admin-nav-icon {
+    font-size: 2rem;
+}
+
+.admin-nav-content h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+}
+
+.admin-nav-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}

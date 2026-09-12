@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if supplier else 'New' }} Supplier - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏭 {{ 'Edit' if supplier else 'New' }} Supplier</h1>
+</div>
+
+<form method="POST" class="panel">
+    <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="name">Supplier Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required
+                   value="{{ supplier.name if supplier else '' }}"
+                   placeholder="Company or person name">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="tax_id">Tax ID / VAT Number</label>
+            <input type="text" id="tax_id" name="tax_id" class="form-control"
+                   value="{{ supplier.tax_id if supplier else '' }}"
+                   placeholder="GB123456789">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="contact_name">Contact Name</label>
+            <input type="text" id="contact_name" name="contact_name" class="form-control"
+                   value="{{ supplier.contact_name if supplier else '' }}"
+                   placeholder="Main contact person">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-control"
+                   value="{{ supplier.email if supplier else '' }}"
+                   placeholder="accounts@supplier.com">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" class="form-control"
+                   value="{{ supplier.phone if supplier else '' }}"
+                   placeholder="+44 123 456 7890">
+        </div>
+    </div>
+    
+    <h3 class="section-title">Address</h3>
+    
+    <div class="form-group">
+        <label class="form-label" for="address_line1">Address Line 1</label>
+        <input type="text" id="address_line1" name="address_line1" class="form-control"
+               value="{{ supplier.address_line1 if supplier else '' }}"
+               placeholder="Street address">
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="address_line2">Address Line 2</label>
+        <input type="text" id="address_line2" name="address_line2" class="form-control"
+               value="{{ supplier.address_line2 if supplier else '' }}"
+               placeholder="Suite, unit, building, etc.">
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="city">City</label>
+            <input type="text" id="city" name="city" class="form-control"
+                   value="{{ supplier.city if supplier else '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="state">County/State</label>
+            <input type="text" id="state" name="state" class="form-control"
+                   value="{{ supplier.state if supplier else '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="postal_code">Postal Code</label>
+            <input type="text" id="postal_code" name="postal_code" class="form-control"
+                   value="{{ supplier.postal_code if supplier else '' }}">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="country">Country</label>
+        <select id="country" name="country" class="form-control">
+            {% set countries = [
+                'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia', 
+                'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 
+                'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 
+                'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada', 
+                'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 
+                'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 
+                'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 
+                'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 
+                'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 
+                'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 
+                'Ireland', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 
+                'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 
+                'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 
+                'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 
+                'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 
+                'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 
+                'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman', 
+                'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 
+                'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 
+                'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 
+                'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 
+                'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 
+                'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 
+                'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 
+                'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 
+                'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 
+                'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 
+                'Zambia', 'Zimbabwe'
+            ] %}
+            {% set current_country = supplier.country if supplier else 'United Kingdom' %}
+            {% for c in countries %}
+            <option value="{{ c }}" {% if c == current_country %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <h3 class="section-title">Payment Settings</h3>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label" for="payment_terms">Payment Terms (Days)</label>
+            <input type="number" id="payment_terms" name="payment_terms" class="form-control"
+                   value="{{ supplier.payment_terms if supplier else 30 }}" min="0">
+            <small class="text-muted">Default due date calculation for bills</small>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="default_coa_id">Default Expense Account</label>
+            <select id="default_coa_id" name="default_coa_id" class="form-control">
+                <option value="">-- Select Account --</option>
+                {% for account in coa_accounts %}
+                <option value="{{ account.id }}" 
+                        {% if supplier and supplier.default_coa_id == account.id %}selected{% endif %}>
+                    {{ account.code }} - {{ account.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Auto-fill on new bills from this supplier</small>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label" for="notes">Notes</label>
+        <textarea id="notes" name="notes" class="form-control" rows="3"
+                  placeholder="Internal notes about this supplier...">{{ supplier.notes if supplier else '' }}</textarea>
+    </div>
+    
+    {% if supplier %}
+    <div class="form-group">
+        <label class="form-check">
+            <input type="checkbox" name="is_active" value="1" {% if supplier.is_active %}checked{% endif %}>
+            <span>Active supplier</span>
+        </label>
+    </div>
+    {% endif %}
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            💾 {{ 'Update' if supplier else 'Create' }} Supplier
+        </button>
+        <a href="{{ url_for('suppliers') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

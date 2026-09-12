@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}About - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">ℹ️ About Invoice Manager</h1>
+    <p class="page-subtitle">Version information and documentation</p>
+</div>
+
+<div class="panel mb-4">
+    <div style="text-align: center; padding: 2rem 0;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">📄</div>
+        <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--accent-yellow), var(--accent-red)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Invoice Manager
+        </h2>
+        <p style="font-size: 1.5rem; color: var(--accent-blue); margin-bottom: 1rem;">Version 1.0</p>
+        <p style="color: var(--text-secondary);">Professional invoicing solution for small businesses and freelancers</p>
+    </div>
+    
+    <hr style="border-color: var(--border); margin: 2rem 0;">
+    
+    <div style="text-align: center; padding: 1rem 0;">
+        <p style="margin-bottom: 0.5rem;"><strong>Copyright © 2026 Sondela Consulting Ltd.</strong></p>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">All rights reserved.</p>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📚 Documentation & Resources</h3>
+    <p class="text-muted" style="margin-bottom: 1.5rem;">Learn how to use Invoice Manager effectively.</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+        <a href="https://docs.sondelaconsulting.com" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-blue); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <h4 style="margin-top: 0; color: var(--accent-blue);">📖 User Guide</h4>
+                <p class="text-muted" style="font-size: 0.9rem;">Complete guide to all features and functionality.</p>
+                <span style="color: var(--accent-blue); font-size: 0.85rem;">docs.sondelaconsulting.com →</span>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('api_help') }}" style="text-decoration: none; color: inherit;">
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-green); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <h4 style="margin-top: 0; color: var(--accent-green);">🔌 API Documentation</h4>
+                <p class="text-muted" style="font-size: 0.9rem;">REST API reference for developers.</p>
+                <span style="color: var(--accent-green); font-size: 0.85rem;">View API Docs →</span>
+            </div>
+        </a>
+        
+        <a href="https://roadmap.sondelaconsulting.com" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-yellow); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <h4 style="margin-top: 0; color: var(--accent-yellow);">🗺️ Product Roadmap</h4>
+                <p class="text-muted" style="font-size: 0.9rem;">See what's coming next and vote on features.</p>
+                <span style="color: var(--accent-yellow); font-size: 0.85rem;">roadmap.sondelaconsulting.com →</span>
+            </div>
+        </a>
+        
+        <a href="https://roadmap.sondelaconsulting.com/request" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-red); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <h4 style="margin-top: 0; color: var(--accent-red);">💡 Request a Feature</h4>
+                <p class="text-muted" style="font-size: 0.9rem;">Have an idea? Submit a feature request.</p>
+                <span style="color: var(--accent-red); font-size: 0.85rem;">Submit Request →</span>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">⚙️ System Information</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <span class="text-muted">Version</span>
+            <div style="font-size: 1.25rem; font-weight: 600;">1.0.0</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <span class="text-muted">Release Date</span>
+            <div style="font-size: 1.25rem; font-weight: 600;">January 2026</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <span class="text-muted">Framework</span>
+            <div style="font-size: 1.25rem; font-weight: 600;">Flask / Python</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <span class="text-muted">Database</span>
+            <div style="font-size: 1.25rem; font-weight: 600;">SQLite / MySQL</div>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">📞 Support & Contact</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px;">
+            <h4 style="margin-top: 0;">📧 Email Support</h4>
+            <p class="text-muted">For technical support and questions:</p>
+            <a href="mailto:helpdesk@sondelaconsulting.com" style="color: var(--accent-yellow);">helpdesk@sondelaconsulting.com</a>
+        </div>
+        
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px;">
+            <h4 style="margin-top: 0;">🌐 Website</h4>
+            <p class="text-muted">Visit our website for more information:</p>
+            <a href="https://sondelaconsulting.com" target="_blank" style="color: var(--accent-yellow);">sondelaconsulting.com</a>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

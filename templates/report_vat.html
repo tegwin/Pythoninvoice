@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}VAT Report - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🧾 VAT Report</h1>
+        <p class="page-subtitle">VAT Return Summary</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reports') }}" class="btn btn-secondary">← Back to Reports</a>
+        {% if report %}
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Date Range Selector -->
+<div class="panel mb-4">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label>Period Start</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label>Period End</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+    </form>
+</div>
+
+{% if report %}
+<!-- CRITICAL WARNING -->
+<div class="panel mb-4" style="background: var(--accent-red)22; border: 2px solid var(--accent-red);">
+    <div class="flex gap-4" style="align-items: flex-start;">
+        <span style="font-size: 2.5rem;">⚠️</span>
+        <div>
+            <strong style="color: var(--accent-red); font-size: 1.2rem;">TAX REPORT - MUST BE VERIFIED</strong>
+            <p style="margin: 0.5rem 0 0 0; color: var(--accent-red);">
+                This VAT report is provided as a guide only. You <strong>MUST</strong> have all figures 
+                verified by a qualified accountant or tax advisor before submitting to HMRC. 
+                Incorrect VAT returns may result in penalties and interest charges.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Report Header -->
+<div class="panel mb-4" style="text-align: center;">
+    <h2 style="margin: 0;">VAT Return Summary</h2>
+    <p class="text-muted" style="margin: 0.5rem 0;">
+        Period: {{ report.period.start_date }} to {{ report.period.end_date }}
+    </p>
+    <p class="text-muted" style="margin: 0; font-size: 0.85rem;">
+        Generated: {{ report.generated_at[:19] }}
+    </p>
+</div>
+
+<!-- VAT Boxes -->
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">VAT Return Boxes</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Box</th>
+                <th>Description</th>
+                <th class="text-right" style="width: 20%;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Box 1</strong></td>
+                <td>{{ report.vat_return_boxes.box1_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.vat_return_boxes.box1) }}</td>
+            </tr>
+            <tr>
+                <td><strong>Box 2</strong></td>
+                <td>{{ report.vat_return_boxes.box2_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.vat_return_boxes.box2) }}</td>
+            </tr>
+            <tr style="background: var(--bg-dark);">
+                <td><strong>Box 3</strong></td>
+                <td>{{ report.vat_return_boxes.box3_description }}</td>
+                <td class="text-right"><strong>{{ currency_symbol }}{{ "%.2f"|format(report.vat_return_boxes.box3) }}</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Box 4</strong></td>
+                <td>{{ report.vat_return_boxes.box4_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.vat_return_boxes.box4) }}</td>
+            </tr>
+            <tr style="background: {% if report.vat_return_boxes.box5 > 0 %}var(--accent-red){% else %}var(--accent-green){% endif %}22;">
+                <td><strong>Box 5</strong></td>
+                <td>{{ report.vat_return_boxes.box5_description }}</td>
+                <td class="text-right" style="font-size: 1.2rem;"><strong>{{ currency_symbol }}{{ "%.2f"|format(report.vat_return_boxes.box5|abs) }}</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Box 6</strong></td>
+                <td>{{ report.vat_return_boxes.box6_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ report.vat_return_boxes.box6 }}</td>
+            </tr>
+            <tr>
+                <td><strong>Box 7</strong></td>
+                <td>{{ report.vat_return_boxes.box7_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ report.vat_return_boxes.box7 }}</td>
+            </tr>
+            <tr>
+                <td><strong>Box 8</strong></td>
+                <td>{{ report.vat_return_boxes.box8_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ report.vat_return_boxes.box8 }}</td>
+            </tr>
+            <tr>
+                <td><strong>Box 9</strong></td>
+                <td>{{ report.vat_return_boxes.box9_description }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ report.vat_return_boxes.box9 }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Summary and Checklist -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <div class="panel" style="border-left: 4px solid {% if report.summary.net_vat_position > 0 %}var(--accent-red){% else %}var(--accent-green){% endif %};">
+        <h3 class="section-title" style="margin-top: 0;">VAT Position</h3>
+        <div style="text-align: center;">
+            <p style="font-size: 2.5rem; font-weight: bold; margin: 0; color: {% if report.summary.net_vat_position > 0 %}var(--accent-red){% else %}var(--accent-green){% endif %};">
+                {{ currency_symbol }}{{ "%.2f"|format(report.summary.net_vat_position|abs) }}
+            </p>
+            <p style="font-size: 1.2rem; margin: 0.5rem 0 0 0;">
+                {{ report.summary.position }}
+            </p>
+        </div>
+        
+        <table class="data-table" style="margin-top: 1rem;">
+            <tbody>
+                <tr>
+                    <td>VAT Collected on Sales</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(report.summary.vat_collected) }}</td>
+                </tr>
+                <tr>
+                    <td>Less: Credit Note VAT</td>
+                    <td class="text-right">({{ currency_symbol }}{{ "%.2f"|format(report.summary.credit_note_vat) }})</td>
+                </tr>
+                <tr>
+                    <td>VAT on Bills</td>
+                    <td class="text-right">({{ currency_symbol }}{{ "%.2f"|format(report.summary.vat_on_bills) }})</td>
+                </tr>
+                <tr>
+                    <td>VAT on Expenses</td>
+                    <td class="text-right">({{ currency_symbol }}{{ "%.2f"|format(report.summary.vat_on_expenses) }})</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Interactive Verification Checklist -->
+    <div class="panel">
+        <h3 class="section-title" style="margin-top: 0; color: var(--accent-yellow);">✅ Verification Checklist</h3>
+        <form id="checklistForm" method="POST" action="{{ url_for('save_vat_checklist') }}">
+            <input type="hidden" name="start_date" value="{{ start_date }}">
+            <input type="hidden" name="end_date" value="{{ end_date }}">
+            
+            <div class="checklist-items">
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_sales_verified" value="1" 
+                           {% if submission and submission.checklist_sales_verified %}checked{% endif %}>
+                    <span>Verify all sales invoices are correctly recorded</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_vat_numbers" value="1"
+                           {% if submission and submission.checklist_vat_numbers %}checked{% endif %}>
+                    <span>Check all purchase invoices have valid VAT numbers</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_credit_notes" value="1"
+                           {% if submission and submission.checklist_credit_notes %}checked{% endif %}>
+                    <span>Ensure credit notes are properly accounted for</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_expenses_receipts" value="1"
+                           {% if submission and submission.checklist_expenses_receipts %}checked{% endif %}>
+                    <span>Confirm all expenses with VAT have valid receipts</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_partial_exemption" value="1"
+                           {% if submission and submission.checklist_partial_exemption %}checked{% endif %}>
+                    <span>Review any partial exemption calculations if applicable</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_reverse_charge" value="1"
+                           {% if submission and submission.checklist_reverse_charge %}checked{% endif %}>
+                    <span>Check for any reverse charge transactions</span>
+                </label>
+                
+                <label class="checklist-item">
+                    <input type="checkbox" name="checklist_eu_supply" value="1"
+                           {% if submission and submission.checklist_eu_supply %}checked{% endif %}>
+                    <span>Verify EU supply/acquisition figures if applicable</span>
+                </label>
+                
+                <label class="checklist-item" style="background: var(--accent-yellow)22; border-radius: 6px;">
+                    <input type="checkbox" name="checklist_accountant_reviewed" value="1"
+                           {% if submission and submission.checklist_accountant_reviewed %}checked{% endif %}>
+                    <span><strong>Have figures reviewed by qualified accountant</strong></span>
+                </label>
+            </div>
+            
+            <div class="mt-3">
+                <button type="submit" class="btn btn-secondary btn-sm">💾 Save Checklist</button>
+                {% if submission and submission.updated_at %}
+                <span class="text-muted" style="font-size: 0.85rem; margin-left: 1rem;">
+                    Last saved: {{ submission.updated_at }}
+                </span>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submission Section -->
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📤 Submit Report</h3>
+    
+    <div class="panel mb-3" style="background: var(--accent-yellow)22; border: 2px solid var(--accent-yellow);">
+        <div class="flex gap-4" style="align-items: flex-start;">
+            <span style="font-size: 2rem;">⚠️</span>
+            <div>
+                <strong style="color: var(--accent-yellow);">Important: Seek Professional Advice</strong>
+                <p style="margin: 0.5rem 0 0 0;">
+                    Before submitting any tax return, we <strong>strongly recommend</strong> having your figures 
+                    reviewed by a qualified accountant or tax advisor. Incorrect submissions may result in 
+                    penalties, interest charges, or audit action. This system does not provide tax advice.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="submission-grid">
+        <!-- Download PDF -->
+        <div class="submission-card">
+            <h4>📄 Download PDF</h4>
+            <p>Generate a PDF copy of this VAT return for your records.</p>
+            <a href="{{ url_for('report_vat_pdf', start_date=start_date, end_date=end_date) }}" class="btn btn-secondary">Download PDF</a>
+        </div>
+        
+        <!-- Send to Accountant -->
+        {% if settings.accountant_email %}
+        <div class="submission-card">
+            <h4>👔 Send to Accountant</h4>
+            <p>Email this report to {{ settings.accountant_name or 'your accountant' }} for review.</p>
+            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+                <input type="hidden" name="report_type" value="vat">
+                <input type="hidden" name="recipient" value="accountant">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Send VAT report to {{ settings.accountant_email }}?');">
+                    📧 Send to {{ settings.accountant_name or 'Accountant' }}
+                </button>
+            </form>
+            {% if submission and submission.submitted_to_accountant %}
+            <small class="text-muted d-block mt-2">✅ Sent {{ submission.submitted_to_accountant_at }}</small>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="submission-card" style="opacity: 0.6;">
+            <h4>👔 Send to Accountant</h4>
+            <p>No accountant configured. <a href="{{ url_for('settings') }}">Add accountant details</a> in Settings.</p>
+        </div>
+        {% endif %}
+        
+        <!-- Submit to Tax Authority -->
+        {% if settings.tax_authority %}
+        <div class="submission-card">
+            <h4>🏛️ Submit to {{ settings.tax_authority }}</h4>
+            {% if settings.tax_authority_email %}
+            <p>Email submission to {{ settings.tax_authority }}.</p>
+            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+                <input type="hidden" name="report_type" value="vat">
+                <input type="hidden" name="recipient" value="authority">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to submit this VAT report to {{ settings.tax_authority }}?\n\nThis action cannot be undone. Please ensure you have had the figures verified by a qualified accountant.');">
+                    📧 Submit to {{ settings.tax_authority }}
+                </button>
+            </form>
+            {% if submission and submission.submitted_to_authority %}
+            <small class="text-muted d-block mt-2">✅ Submitted {{ submission.submitted_to_authority_at }}</small>
+            {% endif %}
+            {% else %}
+            <p>No submission email configured for {{ settings.tax_authority }}.</p>
+            {% endif %}
+            
+            {% if settings.tax_authority == 'HMRC' %}
+            <a href="https://www.gov.uk/vat-returns" target="_blank" class="btn btn-secondary btn-sm mt-2">🔗 HMRC VAT Portal</a>
+            {% elif settings.tax_authority == 'IRS' %}
+            <a href="https://www.irs.gov/businesses" target="_blank" class="btn btn-secondary btn-sm mt-2">🔗 IRS Business Portal</a>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="submission-card" style="opacity: 0.6;">
+            <h4>🏛️ Tax Authority</h4>
+            <p>No tax authority configured. <a href="{{ url_for('settings') }}">Add tax authority</a> in Settings.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<div class="panel">
+    <div class="empty-state">
+        <p>Select a VAT period to generate the report</p>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.checklist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.checklist-item:hover {
+    background: var(--bg-dark);
+    border-radius: 6px;
+}
+
+.checklist-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checklist-item input[type="checkbox"]:checked + span {
+    color: var(--accent-green);
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.submission-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.submission-card {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.submission-card h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+}
+
+.submission-card p {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+@media print {
+    .page-header, .page-actions, form, .btn, .checklist-items input, .submission-grid {
+        display: none !important;
+    }
+    
+    .panel {
+        break-inside: avoid;
+        border: 1px solid #ddd !important;
+        background: white !important;
+    }
+}
+</style>
+{% endblock %}

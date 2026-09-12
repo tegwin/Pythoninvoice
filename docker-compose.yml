@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-invoice_manager}
+      MYSQL_USER: ${MYSQL_USER:-invoice}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # No ports published: only the app container needs to reach MySQL.
+    # Uncomment to connect a GUI client from the host.
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-invoice_manager}
+      MYSQL_USER: ${MYSQL_USER:-invoice}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      # Must be stable, or every restart logs all users out.
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+    volumes:
+      # Uploaded logos, avatars and generated invoice files live outside
+      # the image so they survive a rebuild.
+      - app_data:/app/data
+      - app_uploads:/app/static/uploads
+    ports:
+      - "${APP_PORT:-5001}:5000"
+
+volumes:
+  db_data:
+  app_data:
+  app_uploads:

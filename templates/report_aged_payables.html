@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Aged Payables - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📅 Aged Payables</h1>
+        <p class="page-subtitle">Outstanding Supplier Bills</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('reports') }}" class="btn btn-secondary">← Back to Reports</a>
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+    </div>
+</div>
+
+<!-- Date Selector -->
+<div class="panel mb-4">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="margin: 0;">
+            <label>As of Date</label>
+            <input type="date" name="as_of_date" class="form-control" value="{{ as_of_date or '' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Update Report</button>
+    </form>
+</div>
+
+<!-- Summary -->
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem;">
+    <div class="panel" style="text-align: center; border-left: 4px solid var(--accent-green);">
+        <h4 class="text-muted" style="margin: 0; font-size: 0.85rem;">Current</h4>
+        <p style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-green);">
+            {{ currency_symbol }}{{ "%.2f"|format(report.totals.current) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center; border-left: 4px solid var(--accent-blue);">
+        <h4 class="text-muted" style="margin: 0; font-size: 0.85rem;">1-30 Days</h4>
+        <p style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-blue);">
+            {{ currency_symbol }}{{ "%.2f"|format(report.totals['1_30']) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center; border-left: 4px solid var(--accent-yellow);">
+        <h4 class="text-muted" style="margin: 0; font-size: 0.85rem;">31-60 Days</h4>
+        <p style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-yellow);">
+            {{ currency_symbol }}{{ "%.2f"|format(report.totals['31_60']) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center; border-left: 4px solid #f97316;">
+        <h4 class="text-muted" style="margin: 0; font-size: 0.85rem;">61-90 Days</h4>
+        <p style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; color: #f97316;">
+            {{ currency_symbol }}{{ "%.2f"|format(report.totals['61_90']) }}
+        </p>
+    </div>
+    <div class="panel" style="text-align: center; border-left: 4px solid var(--accent-red);">
+        <h4 class="text-muted" style="margin: 0; font-size: 0.85rem;">90+ Days</h4>
+        <p style="font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; color: var(--accent-red);">
+            {{ currency_symbol }}{{ "%.2f"|format(report.totals.over_90) }}
+        </p>
+    </div>
+</div>
+
+<!-- Total -->
+<div class="panel mb-4" style="text-align: center;">
+    <h3 style="margin: 0;">Total Outstanding: <span style="color: var(--accent-red);">{{ currency_symbol }}{{ "%.2f"|format(report.totals.total) }}</span></h3>
+    <p class="text-muted" style="margin: 0.5rem 0 0 0;">{{ report.bill_count }} bills as of {{ report.as_of_date }}</p>
+</div>
+
+<!-- Detailed Tables -->
+{% macro bill_table(bills, title, color) %}
+{% if bills %}
+<div class="panel mb-4" style="border-left: 4px solid {{ color }};">
+    <h3 class="section-title" style="margin-top: 0; color: {{ color }};">{{ title }}</h3>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Reference</th>
+                    <th>Supplier</th>
+                    <th>Bill Date</th>
+                    <th>Due Date</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-right">Paid</th>
+                    <th class="text-right">Balance</th>
+                    <th>Days Overdue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr>
+                    <td><a href="{{ url_for('bill_detail', bill_id=bill.id) }}">{{ bill.bill_number }}</a></td>
+                    <td>{{ bill.reference or '-' }}</td>
+                    <td>{{ bill.supplier_name or '-' }}</td>
+                    <td>{{ bill.bill_date }}</td>
+                    <td>{{ bill.due_date }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(bill.total) }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ "%.2f"|format(bill.amount_paid) }}</td>
+                    <td class="text-right"><strong>{{ currency_symbol }}{{ "%.2f"|format(bill.balance) }}</strong></td>
+                    <td>{% if bill.days_overdue > 0 %}{{ bill.days_overdue|int }} days{% else %}Current{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{{ bill_table(report.buckets.current, 'Current (Not Due)', 'var(--accent-green)') }}
+{{ bill_table(report.buckets['1_30'], '1-30 Days Overdue', 'var(--accent-blue)') }}
+{{ bill_table(report.buckets['31_60'], '31-60 Days Overdue', 'var(--accent-yellow)') }}
+{{ bill_table(report.buckets['61_90'], '61-90 Days Overdue', '#f97316') }}
+{{ bill_table(report.buckets.over_90, '90+ Days Overdue', 'var(--accent-red)') }}
+
+{% if not report.bill_count %}
+<div class="panel">
+    <div class="empty-state">
+        <p>No outstanding bills</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

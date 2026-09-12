@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 {{ title }}</h1>
+    <p class="page-subtitle">Upload a CSV file to import data</p>
+</div>
+
+<div class="panel" style="max-width: 600px;">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label class="form-label" for="file">CSV File</label>
+            <input type="file" id="file" name="file" class="form-control" accept=".csv" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="update_existing" value="1">
+                <span>Update existing records (match by email/SKU)</span>
+            </label>
+        </div>
+        
+        <div class="info-box mb-4">
+            <h4 style="margin-top: 0;">📋 Expected Format</h4>
+            <p>{{ description }}</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">📥 Import</button>
+            <a href="{{ template_url }}" class="btn btn-secondary" download>📄 Download Template</a>
+            <a href="{{ back_url }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="panel mt-4" style="max-width: 600px;">
+    <h3 class="section-title" style="margin-top: 0;">💡 Tips</h3>
+    <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary);">
+        <li>The first row should contain column headers</li>
+        <li>Use UTF-8 encoding for special characters</li>
+        <li>Date format: YYYY-MM-DD</li>
+        <li>For boolean fields, use 1/0 or true/false</li>
+        <li>Empty cells will be treated as null/empty values</li>
+        <li><strong>Download the template</strong> to ensure correct column headers</li>
+    </ul>
+</div>
+
+<style>
+.info-box {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.info-box h4 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+</style>
+{% endblock %}

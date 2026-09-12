@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Recurring Invoices - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🔄 Recurring Invoices</h1>
+    <p class="page-subtitle">Manage automatically generated invoices</p>
+</div>
+
+<div class="panel mb-4">
+    <div class="flex gap-2 justify-between" style="flex-wrap: wrap;">
+        <div class="flex gap-2">
+            <a href="{{ url_for('new_recurring_invoice') }}" class="btn btn-primary">➕ New Recurring Invoice</a>
+            {% if due_count > 0 %}
+            <form method="POST" action="{{ url_for('generate_due_invoices') }}" style="display: inline;">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Generate {{ due_count }} invoice(s) now?');">
+                    ⚡ Generate Due Invoices ({{ due_count }})
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('recurring_settings') }}" class="btn btn-secondary">⚙️ Settings</a>
+        </div>
+    </div>
+</div>
+
+{% if due_count > 0 %}
+<div class="panel mb-4" style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-yellow);">
+    <div class="flex gap-2 items-center">
+        <span style="font-size: 1.5rem;">⚠️</span>
+        <div>
+            <strong>{{ due_count }} invoice(s) due for generation</strong>
+            <p class="text-muted" style="margin: 0;">These recurring invoices are scheduled to be generated today or earlier.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel">
+    {% if recurring_invoices %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Frequency</th>
+                <th>Next Invoice</th>
+                <th>Amount</th>
+                <th>Generated</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ri in recurring_invoices %}
+            <tr style="{% if not ri.active %}opacity: 0.5;{% endif %}">
+                <td>
+                    <strong>{{ ri.customer_name or 'Unknown Customer' }}</strong>
+                    {% if ri.customer_email %}
+                    <div class="text-muted" style="font-size: 0.85rem;">{{ ri.customer_email }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-sent">{{ ri.frequency_info.name or ri.frequency|title }}</span>
+                </td>
+                <td>
+                    {% if ri.next_invoice_date %}
+                    {{ ri.next_invoice_date }}
+                    {% set days_until = (ri.next_invoice_date | string)[:10] %}
+                    {% endif %}
+                </td>
+                <td>
+                    <strong>{{ ri.currency }} {{ "%.2f"|format(ri.total or 0) }}</strong>
+                </td>
+                <td>
+                    <span class="badge badge-draft">{{ ri.invoices_generated or 0 }} invoices</span>
+                </td>
+                <td>
+                    {% if ri.active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% if ri.auto_send %}
+                    <span class="badge badge-sent" title="Auto-send enabled">📧</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="badge badge-cancelled">Paused</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <a href="{{ url_for('edit_recurring_invoice', recurring_id=ri.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                        <form method="POST" action="{{ url_for('generate_recurring_invoice', recurring_id=ri.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Generate invoice now">⚡</button>
+                        </form>
+                        {% if ri.active %}
+                        <form method="POST" action="{{ url_for('toggle_recurring_invoice', recurring_id=ri.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Pause">⏸️</button>
+                        </form>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('toggle_recurring_invoice', recurring_id=ri.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Resume">▶️</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔄</div>
+        <h3 class="empty-state-title">No Recurring Invoices</h3>
+        <p>Set up recurring invoices to automatically bill customers on a schedule.</p>
+        <a href="{{ url_for('new_recurring_invoice') }}" class="btn btn-primary" style="margin-top: 1rem;">➕ Create Recurring Invoice</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 How Recurring Invoices Work</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">1️⃣</div>
+            <strong>Create Template</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Set up customer, items, and frequency</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">2️⃣</div>
+            <strong>Schedule</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Choose when invoices should be generated</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">3️⃣</div>
+            <strong>Generate</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Click generate or set up auto-generation</p>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">4️⃣</div>
+            <strong>Send</strong>
+            <p class="text-muted" style="font-size: 0.9rem;">Review and send to customer</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

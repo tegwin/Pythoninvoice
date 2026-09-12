@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ supplier.name }} - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🏭 {{ supplier.name }}</h1>
+    <div class="flex gap-2">
+        <a href="{{ url_for('new_bill') }}?supplier_id={{ supplier.id }}" class="btn btn-primary">+ New Bill</a>
+        <a href="{{ url_for('edit_supplier', supplier_id=supplier.id) }}" class="btn btn-secondary">✏️ Edit</a>
+    </div>
+</div>
+
+<div class="form-row mb-4">
+    <!-- Supplier Info -->
+    <div class="panel" style="flex: 1;">
+        <h3 class="section-title" style="margin-top: 0;">Contact Details</h3>
+        
+        {% if supplier.contact_name %}
+        <p><strong>Contact:</strong> {{ supplier.contact_name }}</p>
+        {% endif %}
+        
+        {% if supplier.email %}
+        <p><strong>Email:</strong> <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></p>
+        {% endif %}
+        
+        {% if supplier.phone %}
+        <p><strong>Phone:</strong> {{ supplier.phone }}</p>
+        {% endif %}
+        
+        {% if supplier.tax_id %}
+        <p><strong>Tax ID:</strong> {{ supplier.tax_id }}</p>
+        {% endif %}
+        
+        {% if supplier.address_line1 %}
+        <h4 style="margin-top: 1.5rem;">Address</h4>
+        <p style="white-space: pre-line;">{{ supplier.address_line1 }}
+{% if supplier.address_line2 %}{{ supplier.address_line2 }}{% endif %}
+{{ supplier.city }}{% if supplier.state %}, {{ supplier.state }}{% endif %} {{ supplier.postal_code }}
+{{ supplier.country }}</p>
+        {% endif %}
+        
+        <p class="text-muted" style="margin-top: 1.5rem;">
+            <strong>Payment Terms:</strong> {{ supplier.payment_terms or 30 }} days
+        </p>
+    </div>
+    
+    <!-- Stats -->
+    <div class="panel" style="flex: 1;">
+        <h3 class="section-title" style="margin-top: 0;">Summary</h3>
+        
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="stat-card">
+                <div class="stat-value">{{ bills|length }}</div>
+                <div class="stat-label">Total Bills</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value text-red">{{ currency_symbol }}{{ "%.2f"|format(outstanding or 0) }}</div>
+                <div class="stat-label">Outstanding</div>
+            </div>
+        </div>
+        
+        {% if supplier.notes %}
+        <h4 style="margin-top: 1.5rem;">Notes</h4>
+        <p class="text-muted">{{ supplier.notes }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bills -->
+<div class="panel">
+    <div class="flex" style="justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="section-title" style="margin: 0;">Bills</h3>
+        <a href="{{ url_for('new_bill') }}?supplier_id={{ supplier.id }}" class="btn btn-primary btn-sm">+ New Bill</a>
+    </div>
+    
+    {% if bills %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Bill #</th>
+                <th>Date</th>
+                <th>Due Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in bills %}
+            <tr>
+                <td><strong>{{ bill.bill_number }}</strong></td>
+                <td>{{ bill.bill_date }}</td>
+                <td>{{ bill.due_date or '-' }}</td>
+                <td>{{ currency_symbol }}{{ "%.2f"|format(bill.total or 0) }}</td>
+                <td>
+                    <span class="badge badge-{{ bill.status }}">{{ bill.status|title }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('view_bill', bill_id=bill.id) }}" class="btn btn-secondary btn-sm">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No bills from this supplier yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

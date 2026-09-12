@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <div class="empty-state-icon">⚠️</div>
+    <h3 class="empty-state-title">{{ error or 'Something went wrong' }}</h3>
+    <p>We're sorry, but an error occurred.</p>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="margin-top: 1rem;">← Back to Dashboard</a>
+</div>
+{% endblock %}

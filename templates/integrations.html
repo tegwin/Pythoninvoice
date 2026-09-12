@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+
+{% block title %}Integrations - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🔌 Integrations</h1>
+    <p class="page-subtitle">Connect to external services and manage webhooks</p>
+</div>
+
+<!-- Integration Navigation -->
+<div class="panel mb-4">
+    <div class="flex gap-2" style="flex-wrap: wrap;">
+        <a href="#webhooks-section" class="btn btn-secondary">🔔 Webhooks</a>
+        <a href="#currency-section" class="btn btn-secondary">💱 Currency</a>
+        <a href="#payments-section" class="btn btn-secondary">💳 Payments</a>
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- WEBHOOKS SECTION -->
+<!-- =================================================================== -->
+<div id="webhooks-section" class="integration-section">
+    <div class="panel mb-4">
+        <div class="integration-header" onclick="toggleSection('webhooks')">
+            <h3 class="section-title" style="margin: 0; cursor: pointer;">
+                🔔 Webhooks
+                <span class="toggle-icon" id="webhooks-icon">▼</span>
+            </h3>
+            <p class="text-muted" style="margin: 0.5rem 0 0 0;">Send and receive data from external services</p>
+        </div>
+        
+        <div id="webhooks-content" class="integration-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                
+                <!-- Outgoing Webhooks -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-blue);">
+                    <h4 style="margin-top: 0; color: var(--accent-blue);">📤 Outgoing Webhooks</h4>
+                    <p class="text-muted" style="font-size: 0.9rem;">
+                        Send notifications to external services when events happen (invoice created, payment received, etc.)
+                    </p>
+                    <div style="margin: 1rem 0;">
+                        <strong>{{ outgoing_webhook_count or 0 }}</strong> webhook{% if outgoing_webhook_count != 1 %}s{% endif %} configured
+                    </div>
+                    <a href="{{ url_for('webhooks') }}" class="btn btn-primary">⚙️ Manage Outgoing</a>
+                </div>
+                
+                <!-- Incoming Webhooks -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-green);">
+                    <h4 style="margin-top: 0; color: var(--accent-green);">📥 Incoming Webhooks</h4>
+                    <p class="text-muted" style="font-size: 0.9rem;">
+                        Receive payment notifications from Stripe, PayPal, and other payment providers.
+                    </p>
+                    <div style="margin: 1rem 0;">
+                        <strong>{{ incoming_webhook_count or 0 }}</strong> endpoint{% if incoming_webhook_count != 1 %}s{% endif %} configured
+                    </div>
+                    <a href="{{ url_for('incoming_webhooks') }}" class="btn btn-primary">⚙️ Manage Incoming</a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- CURRENCY SECTION -->
+<!-- =================================================================== -->
+<div id="currency-section" class="integration-section">
+    <div class="panel mb-4">
+        <div class="integration-header" onclick="toggleSection('currency')">
+            <h3 class="section-title" style="margin: 0; cursor: pointer;">
+                💱 Currency Exchange
+                <span class="toggle-icon" id="currency-icon">▼</span>
+            </h3>
+            <p class="text-muted" style="margin: 0.5rem 0 0 0;">Multi-currency support and exchange rates</p>
+        </div>
+        
+        <div id="currency-content" class="integration-content">
+            
+            <!-- API Configuration -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem;">
+                <h4 style="margin-top: 0;">🔑 API Configuration</h4>
+                <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                    Connect to <a href="https://currencyapi.com" target="_blank" style="color: var(--accent-yellow);">CurrencyAPI.com</a> 
+                    to automatically update exchange rates.
+                </p>
+                
+                <form method="POST" action="{{ url_for('save_currency_integration') }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="currency_api_key">API Key</label>
+                            <input type="password" id="currency_api_key" name="currency_api_key" class="form-control" 
+                                   value="{{ settings.currency_api_key or '' }}" placeholder="cur_live_xxxxx">
+                            <small class="text-muted">Get your free API key from <a href="https://app.currencyapi.com/register" target="_blank">currencyapi.com</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="base_currency">Base Currency</label>
+                            <select id="base_currency" name="base_currency" class="form-control">
+                                {% for code, info in CURRENCIES.items() %}
+                                <option value="{{ code }}" {% if settings.default_currency == code %}selected{% endif %}>
+                                    {{ info.symbol }} {{ code }} - {{ info.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox" name="auto_update_rates" value="1" 
+                                   {% if settings.auto_update_rates %}checked{% endif %}>
+                            <span>Automatically update rates when creating invoices</span>
+                        </label>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+                        {% if settings.currency_api_key %}
+                        <button type="button" class="btn btn-secondary" onclick="testCurrencyApi()">🧪 Test Connection</button>
+                        {% endif %}
+                    </div>
+                </form>
+                
+                {% if settings.rates_last_updated %}
+                <p class="text-muted" style="margin-top: 1rem; font-size: 0.85rem;">
+                    Last rate update: {{ settings.rates_last_updated }}
+                </p>
+                {% endif %}
+            </div>
+            
+            <!-- Enabled Currencies -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                <h4 style="margin-top: 0;">🌍 Enabled Currencies</h4>
+                <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                    Select which currencies you want to use for invoicing.
+                </p>
+                
+                <form method="POST" action="{{ url_for('save_enabled_currencies') }}">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;">
+                        {% for code, info in CURRENCIES.items() %}
+                        <label class="form-check" style="padding: 0.5rem; background: var(--bg-medium); border-radius: 6px; font-size: 0.9rem;">
+                            <input type="checkbox" name="currencies" value="{{ code }}" 
+                                   {% if code in enabled_currencies or code == settings.default_currency %}checked{% endif %}
+                                   {% if code == settings.default_currency %}disabled{% endif %}>
+                            <span>{{ info.symbol }} {{ code }}</span>
+                            {% if code == settings.default_currency %}
+                            <small class="text-muted">(Base)</small>
+                            {% endif %}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="currencies" value="{{ settings.default_currency }}">
+                    <button type="submit" class="btn btn-primary">💾 Save Currencies</button>
+                </form>
+            </div>
+            
+            <!-- Exchange Rates -->
+            <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; margin-top: 1rem;">
+                <h4 style="margin-top: 0;">📊 Exchange Rates</h4>
+                
+                {% if currency_rates %}
+                <div class="table-container" style="margin-bottom: 1rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Rate</th>
+                                <th>Updated</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rate in currency_rates %}
+                            <tr>
+                                <td>{{ rate.base_currency }}</td>
+                                <td>{{ rate.target_currency }}</td>
+                                <td>{{ "%.4f" | format(rate.rate) }}</td>
+                                <td style="font-size: 0.85rem;">{{ rate.updated_at.strftime('%Y-%m-%d') if rate.updated_at else 'N/A' }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-secondary btn-sm" 
+                                            onclick="editRate('{{ rate.base_currency }}', '{{ rate.target_currency }}', {{ rate.rate }})">
+                                        ✏️
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted" style="padding: 1rem; text-align: center;">No exchange rates configured yet.</p>
+                {% endif %}
+                
+                <div class="flex gap-2">
+                    {% if settings.currency_api_key %}
+                    <form method="POST" action="{{ url_for('update_currency_rates') }}" style="display: inline;">
+                        <button type="submit" class="btn btn-success">🔄 Update Rates</button>
+                    </form>
+                    {% endif %}
+                    <button type="button" class="btn btn-secondary" onclick="showManualRateForm()">➕ Add Rate</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- PAYMENTS SECTION (Future) -->
+<!-- =================================================================== -->
+<div id="payments-section" class="integration-section">
+    <div class="panel mb-4">
+        <div class="integration-header" onclick="toggleSection('payments')">
+            <h3 class="section-title" style="margin: 0; cursor: pointer;">
+                💳 Payment Providers
+                <span class="toggle-icon" id="payments-icon">▼</span>
+            </h3>
+            <p class="text-muted" style="margin: 0.5rem 0 0 0;">Connect payment gateways for online payments</p>
+        </div>
+        
+        <div id="payments-content" class="integration-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                
+                <!-- Stripe -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid {% if stripe_configured %}#635bff{% else %}var(--border){% endif %};">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.5rem;">💜</span>
+                        <h4 style="margin: 0;">Stripe</h4>
+                        {% if stripe_configured %}
+                        <span class="badge badge-paid">Connected</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Accept credit cards and bank payments. Add "Pay Now" links to invoices.
+                    </p>
+                    <a href="{{ url_for('stripe_settings') }}" class="btn btn-primary">⚙️ Configure Stripe</a>
+                </div>
+                
+                <!-- GoCardless -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid {% if gocardless_configured %}#00b3a4{% else %}var(--border){% endif %};">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🏦</span>
+                        <h4 style="margin: 0;">GoCardless</h4>
+                        {% if gocardless_configured %}
+                        <span class="badge badge-paid">Connected</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Collect recurring payments via Direct Debit.
+                    </p>
+                    <a href="{{ url_for('gocardless_settings') }}" class="btn btn-primary">⚙️ Configure GoCardless</a>
+                </div>
+                
+                <!-- SumUp -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid {% if sumup_configured %}#0070e0{% else %}var(--border){% endif %};">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.5rem;">💳</span>
+                        <h4 style="margin: 0;">SumUp</h4>
+                        {% if sumup_configured %}
+                        <span class="badge badge-paid">Connected</span>
+                        {% elif stripe_configured %}
+                        <span class="badge badge-draft" style="background: var(--accent-yellow)33; color: var(--accent-yellow);">Stripe Active</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Accept card payments online and in-person with card readers.
+                        {% if stripe_configured and not sumup_configured %}
+                        <br><small style="color: var(--accent-yellow);">Disable Stripe to use SumUp.</small>
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('sumup_settings') }}" class="btn btn-primary">⚙️ Configure SumUp</a>
+                </div>
+                
+                <!-- Wise -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #9fe870;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.5rem;">💚</span>
+                        <h4 style="margin: 0;">Wise</h4>
+                        {% if wise_configured %}
+                        <span class="badge badge-paid">Connected</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Receive bank transfers with local account details and auto-matching.
+                    </p>
+                    <a href="{{ url_for('wise_settings') }}" class="btn btn-primary">⚙️ Configure Wise</a>
+                </div>
+                
+                <!-- PayPal -->
+                <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #003087;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.5rem;">🅿️</span>
+                        <h4 style="margin: 0;">PayPal</h4>
+                        <span class="badge badge-draft">Coming Soon</span>
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                        Accept PayPal payments and add payment buttons to invoices.
+                    </p>
+                    <button class="btn btn-secondary" disabled>Configure PayPal</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('settings') }}" class="btn btn-secondary">← Back to Settings</a>
+</div>
+
+<!-- Manual Rate Entry Modal -->
+<div id="manualRateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); border-radius: 12px; padding: 2rem; max-width: 400px; width: 90%;">
+        <h3 style="margin-top: 0;">💱 <span id="modalTitle">Add Exchange Rate</span></h3>
+        <form method="POST" action="{{ url_for('save_manual_rate') }}">
+            <div class="form-group">
+                <label class="form-label" for="from_currency">From Currency</label>
+                <select id="from_currency" name="from_currency" class="form-control">
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}" {% if code == settings.default_currency %}selected{% endif %}>
+                        {{ code }} - {{ info.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="to_currency">To Currency</label>
+                <select id="to_currency" name="to_currency" class="form-control">
+                    {% for code, info in CURRENCIES.items() %}
+                    <option value="{{ code }}">{{ code }} - {{ info.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="rate">Exchange Rate</label>
+                <input type="number" id="rate" name="rate" class="form-control" step="0.0001" min="0" required placeholder="1.2500">
+                <small class="text-muted">1 <span id="fromCurrencyLabel">{{ settings.default_currency or 'GBP' }}</span> = <span id="ratePreview">?</span> <span id="toCurrencyLabel">USD</span></small>
+            </div>
+            <div class="flex gap-2" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">💾 Save Rate</button>
+                <button type="button" class="btn btn-secondary" onclick="closeManualRateModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.integration-section {
+    scroll-margin-top: 1rem;
+}
+.integration-header {
+    cursor: pointer;
+    padding-bottom: 0.5rem;
+}
+.integration-header:hover {
+    opacity: 0.9;
+}
+.toggle-icon {
+    float: right;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+.toggle-icon.collapsed {
+    transform: rotate(-90deg);
+}
+.integration-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+.integration-content.collapsed {
+    max-height: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+</style>
+
+<script>
+function toggleSection(section) {
+    const content = document.getElementById(section + '-content');
+    const icon = document.getElementById(section + '-icon');
+    content.classList.toggle('collapsed');
+    icon.classList.toggle('collapsed');
+}
+
+function testCurrencyApi() {
+    fetch('{{ url_for("test_currency_api") }}', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Connection successful! API is working.');
+            } else {
+                alert('❌ Connection failed: ' + data.error);
+            }
+        })
+        .catch(err => alert('Error testing API: ' + err));
+}
+
+function showManualRateForm() {
+    document.getElementById('modalTitle').textContent = 'Add Exchange Rate';
+    document.getElementById('from_currency').value = '{{ settings.default_currency or "GBP" }}';
+    document.getElementById('to_currency').value = 'USD';
+    document.getElementById('rate').value = '';
+    document.getElementById('manualRateModal').style.display = 'flex';
+    updateRatePreview();
+}
+
+function editRate(from, to, rate) {
+    document.getElementById('modalTitle').textContent = 'Edit Exchange Rate';
+    document.getElementById('from_currency').value = from;
+    document.getElementById('to_currency').value = to;
+    document.getElementById('rate').value = rate;
+    document.getElementById('manualRateModal').style.display = 'flex';
+    updateRatePreview();
+}
+
+function closeManualRateModal() {
+    document.getElementById('manualRateModal').style.display = 'none';
+}
+
+function updateRatePreview() {
+    const from = document.getElementById('from_currency').value;
+    const to = document.getElementById('to_currency').value;
+    const rate = document.getElementById('rate').value || '?';
+    document.getElementById('fromCurrencyLabel').textContent = from;
+    document.getElementById('toCurrencyLabel').textContent = to;
+    document.getElementById('ratePreview').textContent = rate;
+}
+
+document.getElementById('from_currency').addEventListener('change', updateRatePreview);
+document.getElementById('to_currency').addEventListener('change', updateRatePreview);
+document.getElementById('rate').addEventListener('input', updateRatePreview);
+
+document.getElementById('manualRateModal').addEventListener('click', function(e) {
+    if (e.target === this) closeManualRateModal();
+});
+</script>
+{% endblock %}

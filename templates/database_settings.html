@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Database Settings - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🗄️ Database Settings</h1>
+    <p class="page-subtitle">Configure your MySQL database connection</p>
+</div>
+
+<div class="panel mb-4" style="border: 2px solid var(--accent-yellow);">
+    <div class="warning-banner">
+        <span class="warning-icon">⚠️</span>
+        <div>
+            <strong>Important: Backup your data first!</strong>
+            <p class="text-muted" style="margin: 0;">Changing database settings can result in data loss. Always backup before making changes.</p>
+        </div>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('database_settings') }}">
+    <input type="hidden" name="db_type" value="mysql">
+    
+    <div class="panel mb-4">
+        <h3 class="section-title" style="margin-top: 0;">🐬 MySQL / MariaDB Settings</h3>
+        
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="mysql_host">Host</label>
+                <input type="text" id="mysql_host" name="mysql_host" class="form-control" 
+                       value="{{ db_config.mysql_host or 'localhost' }}" placeholder="localhost">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="mysql_port">Port</label>
+                <input type="number" id="mysql_port" name="mysql_port" class="form-control" 
+                       value="{{ db_config.mysql_port or 3306 }}" placeholder="3306">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="mysql_user">Username</label>
+                <input type="text" id="mysql_user" name="mysql_user" class="form-control" 
+                       value="{{ db_config.mysql_user or '' }}" placeholder="root">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="mysql_password">Password</label>
+                <input type="password" id="mysql_password" name="mysql_password" class="form-control" 
+                       value="{{ db_config.mysql_password or '' }}" placeholder="••••••••">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="mysql_database">Database Name</label>
+            <input type="text" id="mysql_database" name="mysql_database" class="form-control" 
+                   value="{{ db_config.mysql_database or 'invoice_manager' }}" placeholder="invoice_manager">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-check">
+                <input type="checkbox" name="mysql_ssl" value="1" 
+                       {% if db_config.mysql_ssl %}checked{% endif %}>
+                <span>Use SSL Connection</span>
+            </label>
+        </div>
+        
+        <button type="button" class="btn btn-secondary" onclick="testMySQLConnection()">
+            🧪 Test Connection
+        </button>
+        <span id="connection-status" style="margin-left: 1rem;"></span>
+    </div>
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">💾 Save Database Settings</button>
+        <a href="{{ url_for('settings') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📊 Database Information</h3>
+    
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">Database Type</span>
+            <span class="info-value">MySQL</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="info-value">
+                {% if db_connected %}
+                <span class="badge badge-paid">Connected</span>
+                {% else %}
+                <span class="badge badge-overdue">Disconnected</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Tables</span>
+            <span class="info-value">{{ table_count or 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Size</span>
+            <span class="info-value">{{ db_size or 'N/A' }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 Setup Instructions</h3>
+    
+    <ol style="line-height: 2;">
+        <li>Create a MySQL database: <code>CREATE DATABASE invoice_manager;</code></li>
+        <li>Enter your MySQL credentials above</li>
+        <li>Click "Test Connection" to verify</li>
+        <li>Run the schema setup: <code>python setup_mysql_schema.py</code></li>
+        <li>Save settings and restart the application</li>
+    </ol>
+</div>
+
+<style>
+.warning-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.warning-icon {
+    font-size: 2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+code {
+    background: var(--bg-dark);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+}
+</style>
+
+<script>
+function testMySQLConnection() {
+    const status = document.getElementById('connection-status');
+    status.innerHTML = '<span class="text-muted">Testing...</span>';
+    
+    const data = {
+        host: document.getElementById('mysql_host').value,
+        port: document.getElementById('mysql_port').value,
+        user: document.getElementById('mysql_user').value,
+        password: document.getElementById('mysql_password').value,
+        database: document.getElementById('mysql_database').value
+    };
+    
+    fetch('{{ url_for("test_mysql_connection") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            status.innerHTML = '<span class="badge badge-paid">✅ Connection successful!</span>';
+        } else {
+            status.innerHTML = '<span class="badge badge-overdue">❌ ' + result.error + '</span>';
+        }
+    })
+    .catch(error => {
+        status.innerHTML = '<span class="badge badge-overdue">❌ Test failed</span>';
+    });
+}
+</script>
+{% endblock %}

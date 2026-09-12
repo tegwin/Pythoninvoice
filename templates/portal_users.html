@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Portal Users - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🌐 Customer Portal Users</h1>
+        <p class="page-subtitle">Manage customer access to the self-service portal</p>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <strong>Portal URL:</strong>
+            <code style="background: var(--bg-dark); padding: 0.25rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">
+                {{ request.url_root }}portal/login
+            </code>
+        </div>
+        <a href="{{ url_for('create_portal_user') }}" class="btn btn-primary">+ Add Portal User</a>
+    </div>
+</div>
+
+{% if portal_users %}
+<div class="panel">
+    <table>
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in portal_users %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('view_customer', customer_id=user.customer_id) }}" style="color: var(--accent-blue);">
+                        {{ user.customer_name }}
+                    </a>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                    {% if user.is_active %}
+                        <span class="badge badge-paid">Active</span>
+                        {% if user.must_change_password %}
+                            <span class="badge badge-draft" style="margin-left: 0.25rem;">Must Change Password</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge badge-overdue">Revoked</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.last_login.strftime('%d %b %Y %H:%M') if user.last_login else 'Never' }}</td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <!-- Impersonate -->
+                        <form action="{{ url_for('impersonate_portal_user', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="View portal as this customer">
+                                👁️ View As
+                            </button>
+                        </form>
+                        
+                        <!-- Reset Password -->
+                        <form action="{{ url_for('reset_portal_password', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" title="Reset password">
+                                🔑 Reset
+                            </button>
+                        </form>
+                        
+                        <!-- Toggle Access -->
+                        {% if user.is_active %}
+                        <form action="{{ url_for('toggle_portal_access', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="revoke">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-red);" title="Revoke access">
+                                🚫 Revoke
+                            </button>
+                        </form>
+                        {% else %}
+                        <form action="{{ url_for('toggle_portal_access', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="restore">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-green);" title="Restore access">
+                                ✅ Restore
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        <!-- Delete -->
+                        <form action="{{ url_for('delete_portal_user', portal_user_id=user.id) }}" method="POST" style="display: inline;"
+                              onsubmit="return confirm('Delete this portal user? They will no longer be able to access the portal.');">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-red);" title="Delete user">
+                                🗑️
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🌐</div>
+    <h3>No Portal Users Yet</h3>
+    <p class="text-muted">Create portal access for your customers so they can view invoices and make payments online.</p>
+    <a href="{{ url_for('create_portal_user') }}" class="btn btn-primary mt-3">+ Add Portal User</a>
+</div>
+{% endif %}
+
+<div class="panel mt-4">
+    <h3 class="section-title" style="margin-top: 0;">ℹ️ About Customer Portal</h3>
+    <p class="text-muted">The customer portal allows your customers to:</p>
+    <ul class="text-muted" style="margin: 1rem 0; padding-left: 1.5rem;">
+        <li>View all their invoices and payment history</li>
+        <li>See outstanding balances and overdue amounts</li>
+        <li>Make payments online via Stripe, GoCardless, or SumUp</li>
+        <li>Download PDF copies of invoices</li>
+    </ul>
+    <p class="text-muted">
+        <strong>Impersonation:</strong> Use "View As" to see exactly what your customer sees. 
+        This is useful for troubleshooting issues or helping customers navigate the portal.
+    </p>
+</div>
+{% endblock %}

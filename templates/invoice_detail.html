@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header" style="position: relative;">
+    {% if invoice.status == 'paid' %}
+    <div class="paid-stamp">PAID</div>
+    {% elif invoice.status == 'cancelled' %}
+    <div class="paid-stamp" style="border-color: #666; color: #666;">CANCELLED</div>
+    {% elif invoice.status == 'overdue' %}
+    <div class="paid-stamp" style="border-color: var(--accent-red); color: var(--accent-red);">OVERDUE</div>
+    {% endif %}
+    
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <div style="{% if invoice.status in ['paid', 'cancelled', 'overdue'] %}margin-left: 180px;{% endif %}">
+            <h1 class="page-title">📄 Invoice {{ invoice.invoice_number }}</h1>
+            <p class="page-subtitle">
+                {{ invoice.customer_name or 'No customer' }} • 
+                <span class="badge badge-{{ invoice.status or 'draft' }}">{{ (invoice.status or 'draft')|title }}</span>
+            </p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">✏️ Edit</a>
+            <a href="{{ url_for('invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-secondary">📥 PDF</a>
+            <a href="{{ url_for('invoice_html', invoice_id=invoice.id) }}" class="btn btn-secondary" target="_blank">🖨️ Print</a>
+            {% if invoice.status != 'paid' %}
+            <a href="{{ url_for('pay_invoice', invoice_id=invoice.id) }}" class="btn btn-success">💳 Record Payment</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.paid-stamp {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%) rotate(-15deg);
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--accent-green);
+    border: 5px solid var(--accent-green);
+    padding: 0.25rem 1rem;
+    border-radius: 12px;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@media (max-width: 768px) {
+    .paid-stamp {
+        font-size: 1.5rem;
+        position: static;
+        transform: rotate(-5deg);
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+    .page-header > .flex > div:first-child {
+        margin-left: 0 !important;
+    }
+}
+</style>
+
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+    <div class="stat-card">
+        <div class="stat-value" style="font-size: 1.5rem;">{{ invoice.issue_date }}</div>
+        <div class="stat-label">Issue Date</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="font-size: 1.5rem;">{{ invoice.due_date }}</div>
+        <div class="stat-label">Due Date</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value green" style="font-size: 1.5rem;">{{ currency_symbol }}{{ "%.2f"|format(invoice.total or 0) }}</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value blue" style="font-size: 1.5rem;">{{ currency_symbol }}{{ "%.2f"|format(invoice.amount_paid or 0) }}</div>
+        <div class="stat-label">Paid</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value {% if (invoice.total or 0) - (invoice.amount_paid or 0) > 0 %}yellow{% else %}green{% endif %}" style="font-size: 1.5rem;">
+            {{ currency_symbol }}{{ "%.2f"|format((invoice.total or 0) - (invoice.amount_paid or 0)) }}
+        </div>
+        <div class="stat-label">Due</div>
+    </div>
+</div>
+
+{% if stripe_enabled and invoice.status not in ['paid', 'cancelled'] and ((invoice.total or 0) - (invoice.amount_paid or 0)) > 0 %}
+<div class="panel mb-4" style="background: linear-gradient(135deg, #635bff11, #635bff22); border-left: 4px solid #635bff;">
+    <div class="flex gap-4 items-center" style="flex-wrap: wrap;">
+        <div style="flex: 1;">
+            <h3 style="margin: 0; color: #635bff;">💳 Online Payment</h3>
+            <p class="text-muted" style="margin: 0.5rem 0 0 0;">
+                {% if stripe_payment_url %}
+                Payment link ready - share with customer or use button to pay
+                {% else %}
+                Generate a secure Stripe payment link for this invoice
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            {% if stripe_payment_url %}
+            <a href="{{ stripe_payment_url }}" class="btn btn-primary" target="_blank" style="background: #635bff;">
+                💳 Pay {{ currency_symbol }}{{ "%.2f"|format((invoice.total or 0) - (invoice.amount_paid or 0)) }}
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="copyStripeLink()">📋 Copy Link</button>
+            {% if invoice.customer_email %}
+            <form method="POST" action="{{ url_for('send_stripe_payment_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <button type="submit" class="btn btn-secondary">
+                    📧 Send to Customer
+                </button>
+            </form>
+            {% endif %}
+            {% else %}
+            <form method="POST" action="{{ url_for('create_stripe_payment_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <button type="submit" class="btn btn-primary" style="background: #635bff;">
+                    ⚡ Generate Payment Link
+                </button>
+            </form>
+            {% if invoice.customer_email %}
+            <form method="POST" action="{{ url_for('generate_and_send_stripe_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <button type="submit" class="btn btn-secondary" style="background: #635bff; color: white;">
+                    ⚡📧 Generate & Send
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script>
+function copyStripeLink() {
+    navigator.clipboard.writeText('{{ stripe_payment_url }}').then(function() {
+        alert('Payment link copied to clipboard!');
+    });
+}
+</script>
+{% endif %}
+
+{% if gocardless_enabled and invoice.status not in ['paid', 'cancelled'] and ((invoice.total or 0) - (invoice.amount_paid or 0)) > 0 %}
+<div class="panel mb-4" style="background: linear-gradient(135deg, #00b3a411, #00b3a422); border-left: 4px solid #00b3a4;">
+    <div class="flex gap-4 items-center" style="flex-wrap: wrap;">
+        <div style="flex: 1;">
+            <h3 style="margin: 0; color: #00b3a4;">🏦 Direct Debit</h3>
+            <p class="text-muted" style="margin: 0.5rem 0 0 0;">
+                {% if gocardless_payment %}
+                    {% if gocardless_payment.status in ['confirmed', 'paid_out'] %}
+                    Payment collected successfully
+                    {% elif gocardless_payment.status == 'pending_submission' %}
+                    Payment scheduled for {{ gocardless_payment.charge_date }}
+                    {% elif gocardless_payment.status == 'submitted' %}
+                    Payment submitted, awaiting collection on {{ gocardless_payment.charge_date }}
+                    {% else %}
+                    Status: {{ gocardless_payment.status|replace('_', ' ')|title }}
+                    {% endif %}
+                {% elif gocardless_mandate %}
+                Customer has active Direct Debit mandate - ready to collect payment
+                {% else %}
+                Customer needs to set up Direct Debit mandate first
+                {% endif %}
+            </p>
+        </div>
+        <div class="flex gap-2">
+            {% if gocardless_payment %}
+                <span class="badge {% if gocardless_payment.status in ['confirmed', 'paid_out'] %}badge-paid{% elif gocardless_payment.status in ['failed', 'cancelled'] %}badge-overdue{% else %}badge-draft{% endif %}" style="padding: 0.75rem 1rem; font-size: 0.9rem;">
+                    {{ gocardless_payment.status|replace('_', ' ')|title }}
+                </span>
+            {% elif gocardless_mandate %}
+                <form method="POST" action="{{ url_for('create_gocardless_payment', invoice_id=invoice.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-primary" style="background: #00b3a4;">
+                        🏦 Collect {{ currency_symbol }}{{ "%.2f"|format((invoice.total or 0) - (invoice.amount_paid or 0)) }}
+                    </button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('setup_direct_debit', customer_id=invoice.customer_id) }}" class="btn btn-primary" style="background: #00b3a4;">
+                    📝 Set Up Direct Debit
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Invoice Details</h3>
+    
+    <div class="form-row">
+        <div>
+            <strong>Currency:</strong> {{ invoice.currency }} ({{ currency_symbol }})
+        </div>
+        <div>
+            <strong>Tax Rate:</strong> {{ invoice.tax_rate }}%
+        </div>
+    </div>
+    
+    {% if invoice.customer_name %}
+    <div style="margin-top: 1rem;">
+        <strong>Bill To:</strong><br>
+        {{ invoice.customer_name }}<br>
+        {% if invoice.customer_email %}{{ invoice.customer_email }}<br>{% endif %}
+        {% if invoice.customer_address1 %}{{ invoice.customer_address1 }}<br>{% endif %}
+        {% if invoice.customer_city %}{{ invoice.customer_city }}{% if invoice.customer_state %}, {{ invoice.customer_state }}{% endif %} {{ invoice.customer_postal }}{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Line Items</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th style="text-align: right;">Qty</th>
+                <th style="text-align: right;">Unit Price</th>
+                <th style="text-align: right;">Tax</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice['items'] %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td style="text-align: right;">{{ item.quantity }}</td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(item.unit_price or 0) }}</td>
+                <td style="text-align: right;">{{ item.tax_rate }}%</td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(item.line_total or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: right;"><strong>Subtotal:</strong></td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(invoice.subtotal or 0) }}</td>
+            </tr>
+            <tr>
+                <td colspan="4" style="text-align: right;"><strong>Tax ({{ invoice.tax_rate }}%):</strong></td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(invoice.tax_amount or 0) }}</td>
+            </tr>
+            <tr style="background: var(--bg-medium);">
+                <td colspan="4" style="text-align: right;"><strong style="font-size: 1.1rem;">Total:</strong></td>
+                <td style="text-align: right; color: var(--accent-green); font-weight: bold; font-size: 1.1rem;">
+                    {{ currency_symbol }}{{ "%.2f"|format(invoice.total or 0) }}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{% if invoice['payments'] %}
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">💳 Payments</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Via</th>
+                <th style="text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in invoice['payments'] %}
+            <tr>
+                <td>{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date and payment.payment_date is not string else (payment.payment_date[:10] if payment.payment_date else '-') }}</td>
+                <td>{{ payment.payment_method or '-' }}</td>
+                <td>{{ payment.reference or '-' }}</td>
+                <td><span class="badge badge-{% if payment.created_via == 'api' %}blue{% elif payment.created_via == 'webhook' %}yellow{% else %}draft{% endif %}">{{ payment.created_via }}</span></td>
+                <td style="text-align: right; color: var(--accent-green);">{{ currency_symbol }}{{ "%.2f"|format(payment.amount or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if invoice.notes %}
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">📝 Notes</h3>
+    <p>{{ invoice.notes }}</p>
+</div>
+{% endif %}
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">⚡ Quick Actions</h3>
+    
+    <div class="flex gap-2 flex-wrap">
+        {% if invoice.status == 'draft' %}
+        <form method="POST" action="{{ url_for('update_invoice_status', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="status" value="sent">
+            <button type="submit" class="btn btn-secondary">📤 Mark as Sent</button>
+        </form>
+        {% endif %}
+        
+        {% if invoice.customer_email %}
+        <form method="POST" action="{{ url_for('send_invoice_email_route', invoice_id=invoice.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Send this invoice to {{ invoice.customer_email }}?');">📧 Send Email</button>
+        </form>
+        {% endif %}
+        
+        {% if invoice.status != 'paid' %}
+        <form method="POST" action="{{ url_for('mark_invoice_paid', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="payment_method" value="Other">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Mark this invoice as fully paid?');">✅ Mark as Paid</button>
+        </form>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('delete_invoice', invoice_id=invoice.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this invoice? This cannot be undone.');">🗑️ Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('invoices') }}" class="btn btn-secondary">← Back to Invoices</a>
+</div>
+{% endblock %}

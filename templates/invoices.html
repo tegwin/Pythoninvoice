@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Invoices - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📄 Invoices</h1>
+    <p class="page-subtitle">Manage your invoices</p>
+</div>
+
+<div class="panel mb-4">
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <div class="flex gap-2">
+            <a href="{{ url_for('new_invoice') }}" class="btn btn-primary">➕ Create Invoice</a>
+            <a href="{{ url_for('bulk_invoices') }}" class="btn btn-secondary">📋 Bulk Edit</a>
+            <a href="{{ url_for('import_invoices') }}" class="btn btn-secondary">📥 Import</a>
+            <a href="{{ url_for('export_invoices') }}" class="btn btn-secondary">📤 Export</a>
+        </div>
+        
+        <div class="flex gap-2 flex-wrap">
+            <a href="{{ url_for('invoices', status='') }}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+            <a href="{{ url_for('invoices', status='draft') }}" class="btn btn-sm {% if status_filter == 'draft' %}btn-primary{% else %}btn-secondary{% endif %}">Draft</a>
+            <a href="{{ url_for('invoices', status='sent') }}" class="btn btn-sm {% if status_filter == 'sent' %}btn-primary{% else %}btn-secondary{% endif %}">Sent</a>
+            <a href="{{ url_for('invoices', status='paid') }}" class="btn btn-sm {% if status_filter == 'paid' %}btn-primary{% else %}btn-secondary{% endif %}">Paid</a>
+            <a href="{{ url_for('invoices', status='partial') }}" class="btn btn-sm {% if status_filter == 'partial' %}btn-primary{% else %}btn-secondary{% endif %}">Partial</a>
+            <a href="{{ url_for('invoices', status='overdue') }}" class="btn btn-sm {% if status_filter == 'overdue' %}btn-primary{% else %}btn-secondary{% endif %}">Overdue</a>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    {% if invoices %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invoices %}
+            <tr>
+                <td><strong>{{ inv.invoice_number }}</strong></td>
+                <td>{{ inv.customer_name or '-' }}</td>
+                <td>{{ inv.issue_date }}</td>
+                <td>{{ inv.due_date }}</td>
+                <td>{{ get_currency_symbol(inv.currency) }}{{ "%.2f"|format(inv.total or 0) }}</td>
+                <td>{{ get_currency_symbol(inv.currency) }}{{ "%.2f"|format(inv.amount_paid or 0) }}</td>
+                <td>
+                    <span class="badge badge-{{ inv.status or 'draft' }}">
+                        {{ (inv.status or 'draft')|title }}
+                    </span>
+                </td>
+                <td>
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('view_invoice', invoice_id=inv.id) }}" class="btn btn-secondary btn-sm">View</a>
+                        <a href="{{ url_for('invoice_pdf', invoice_id=inv.id) }}" class="btn btn-secondary btn-sm">📥 PDF</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📄</div>
+        <h3 class="empty-state-title">No Invoices{% if status_filter %} with status "{{ status_filter }}"{% endif %}</h3>
+        <p>{% if status_filter %}Try a different filter or create a new invoice.{% else %}Create your first invoice to get started.{% endif %}</p>
+        <a href="{{ url_for('new_invoice') }}" class="btn btn-primary" style="margin-top: 1rem;">➕ Create Invoice</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

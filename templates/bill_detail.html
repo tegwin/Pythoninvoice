@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Bill {{ bill.bill_number }} - {{ g.brand_name or 'Invoice Manager' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 Bill {{ bill.bill_number }}</h1>
+    <div class="flex gap-2">
+        {% if bill.status == 'draft' %}
+        <form method="POST" action="{{ url_for('approve_bill', bill_id=bill.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-success">✓ Approve</button>
+        </form>
+        <a href="{{ url_for('edit_bill', bill_id=bill.id) }}" class="btn btn-secondary">✏️ Edit</a>
+        {% endif %}
+        {% if bill.status in ['approved', 'partial'] %}
+        <a href="{{ url_for('pay_bill', bill_id=bill.id) }}" class="btn btn-primary">💰 Record Payment</a>
+        {% endif %}
+    </div>
+</div>
+
+{% set balance = (bill.total or 0) - (bill.amount_paid or 0) %}
+{% set is_overdue = bill.due_date and bill.due_date < today and bill.status not in ['paid', 'cancelled'] %}
+
+<!-- Status Banner -->
+{% if bill.status == 'paid' %}
+<div class="panel mb-4" style="background: var(--accent-green)22; border-left: 4px solid var(--accent-green);">
+    <strong style="color: var(--accent-green);">✓ Paid in Full</strong>
+</div>
+{% elif is_overdue %}
+<div class="panel mb-4" style="background: var(--accent-red)22; border-left: 4px solid var(--accent-red);">
+    <strong style="color: var(--accent-red);">⚠️ Overdue</strong>
+    <span class="text-muted">- Due {{ bill.due_date }}</span>
+</div>
+{% endif %}
+
+<div class="form-row mb-4">
+    <!-- Bill Info -->
+    <div class="panel" style="flex: 1;">
+        <h3 class="section-title" style="margin-top: 0;">Bill Details</h3>
+        
+        <table style="width: 100%;">
+            <tr>
+                <td class="text-muted">Supplier:</td>
+                <td>
+                    {% if bill.supplier_name %}
+                    <a href="{{ url_for('view_supplier', supplier_id=bill.supplier_id) }}">{{ bill.supplier_name }}</a>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if bill.reference %}
+            <tr>
+                <td class="text-muted">Reference:</td>
+                <td>{{ bill.reference }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td class="text-muted">Bill Date:</td>
+                <td>{{ bill.bill_date }}</td>
+            </tr>
+            <tr>
+                <td class="text-muted">Due Date:</td>
+                <td>{{ bill.due_date or '-' }}</td>
+            </tr>
+            <tr>
+                <td class="text-muted">Status:</td>
+                <td><span class="badge badge-{{ bill.status }}">{{ bill.status|title }}</span></td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- Totals -->
+    <div class="panel" style="flex: 1;">
+        <h3 class="section-title" style="margin-top: 0;">Amount</h3>
+        
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="stat-card">
+                <div class="stat-value">{{ currency_symbol }}{{ "%.2f"|format(bill.total or 0) }}</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value {% if balance > 0 %}text-red{% else %}text-green{% endif %}">
+                    {{ currency_symbol }}{{ "%.2f"|format(balance) }}
+                </div>
+                <div class="stat-label">Balance Due</div>
+            </div>
+        </div>
+        
+        {% if bill.amount_paid > 0 %}
+        <p class="text-muted" style="margin-top: 1rem;">
+            Paid: {{ currency_symbol }}{{ "%.2f"|format(bill.amount_paid) }}
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Line Items -->
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">Line Items</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Account</th>
+                <th style="text-align: right;">Qty</th>
+                <th style="text-align: right;">Unit Price</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in bill['items'] %}
+            <tr>
+                <td>{{ item.description or '-' }}</td>
+                <td>
+                    {% if item.coa_name %}
+                    <span class="text-muted">{{ item.coa_code }}</span> {{ item.coa_name }}
+                    {% else %}-{% endif %}
+                </td>
+                <td style="text-align: right;">{{ item.quantity }}</td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(item.unit_price or 0) }}</td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(item.total or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: right;"><strong>Subtotal:</strong></td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(bill.subtotal or 0) }}</td>
+            </tr>
+            {% if bill.tax_amount %}
+            <tr>
+                <td colspan="4" style="text-align: right;"><strong>Tax ({{ bill.tax_rate }}%):</strong></td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(bill.tax_amount or 0) }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td colspan="4" style="text-align: right;"><strong style="font-size: 1.2rem;">Total:</strong></td>
+                <td style="text-align: right; font-size: 1.2rem;"><strong>{{ currency_symbol }}{{ "%.2f"|format(bill.total or 0) }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- Payments -->
+{% if bill.payments %}
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">Payment History</h3>
+    
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th style="text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in bill.payments %}
+            <tr>
+                <td>{{ payment.payment_date }}</td>
+                <td>{{ payment.payment_method or '-' }}</td>
+                <td>{{ payment.reference or '-' }}</td>
+                <td style="text-align: right;">{{ currency_symbol }}{{ "%.2f"|format(payment.amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Notes -->
+{% if bill.notes %}
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">Notes</h3>
+    <p>{{ bill.notes }}</p>
+</div>
+{% endif %}
+
+<!-- Attachment -->
+{% if bill.attachment_path %}
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📎 Supplier Invoice</h3>
+    
+    <div style="text-align: center; padding: 1rem;">
+        {% if bill.attachment_path.endswith('.pdf') %}
+        <div style="padding: 2rem; background: var(--bg-dark); border-radius: 8px;">
+            <span style="font-size: 3rem;">📄</span>
+            <p>PDF Document</p>
+            <a href="{{ url_for('view_bill_attachment', bill_id=bill.id) }}" target="_blank" class="btn btn-primary">
+                📥 View PDF
+            </a>
+        </div>
+        {% elif bill.attachment_path.endswith(('.doc', '.docx')) %}
+        <div style="padding: 2rem; background: var(--bg-dark); border-radius: 8px;">
+            <span style="font-size: 3rem;">📝</span>
+            <p>Word Document</p>
+            <a href="{{ url_for('view_bill_attachment', bill_id=bill.id) }}" target="_blank" class="btn btn-primary">
+                📥 Download
+            </a>
+        </div>
+        {% else %}
+        <a href="{{ url_for('view_bill_attachment', bill_id=bill.id) }}" target="_blank">
+            <img src="{{ url_for('view_bill_attachment', bill_id=bill.id) }}" 
+                 style="max-width: 100%; max-height: 500px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"
+                 alt="Supplier Invoice">
+        </a>
+        <p class="text-muted" style="margin-top: 1rem;">Click to view full size</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="flex gap-2">
+    <a href="{{ url_for('bills') }}" class="btn btn-secondary">← Back to Bills</a>
+    {% if bill.status == 'draft' %}
+    <form method="POST" action="{{ url_for('delete_bill', bill_id=bill.id) }}" style="display: inline;"
+          onsubmit="return confirm('Are you sure you want to delete this bill?');">
+        <button type="submit" class="btn btn-danger">🗑️ Delete</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

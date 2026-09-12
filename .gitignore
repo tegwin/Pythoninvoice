@@ -1,0 +1,20 @@
+# Live credentials — never commit these.
+.env
+data/db_config.json
+
+# Local data
+data/*.db
+data/temp/
+data/invoices/
+static/uploads/
+roadmap/data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Archives / OS
+*.zip
+.DS_Store

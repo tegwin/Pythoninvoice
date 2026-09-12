@@ -1,0 +1,11 @@
+flask>=2.0.0
+requests>=2.25.0
+reportlab>=3.6.0
+python-dateutil>=2.8.0
+
+# Optional: 2FA Support
+pyotp>=2.8.0
+qrcode[pil]>=7.3.0
+
+# Optional: MySQL Support
+mysql-connector-python>=8.0.0

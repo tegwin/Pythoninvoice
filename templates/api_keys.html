@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}API Keys - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="flex justify-between items-center flex-wrap gap-4">
+        <div>
+            <h1 class="page-title">🔑 API Keys</h1>
+            <p class="page-subtitle">Manage API keys for external access</p>
+        </div>
+        <a href="{{ url_for('api_help') }}" class="btn btn-secondary">📚 API Documentation</a>
+    </div>
+</div>
+
+{% if session.get('new_api_key') %}
+<div class="panel mb-4" style="border: 2px solid var(--accent-green); background: rgba(16, 185, 129, 0.1);">
+    <h3 style="color: var(--accent-green); margin-top: 0;">✅ API Key Created: {{ session.pop('new_api_key_name', 'New Key') }}</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        <strong>⚠️ Copy this key now!</strong> It will not be shown again.
+    </p>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="text" id="new-api-key" value="{{ session.pop('new_api_key') }}" readonly
+               class="form-control" style="font-family: monospace; color: var(--accent-yellow);">
+        <button onclick="copyApiKey()" class="btn btn-primary">📋 Copy</button>
+    </div>
+</div>
+<script>
+function copyApiKey() {
+    const input = document.getElementById('new-api-key');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('API key copied!');
+}
+</script>
+{% endif %}
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">Create New API Key</h3>
+    <form method="POST" action="{{ url_for('create_api_key_route') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="name">Key Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="My Integration" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Permissions</label>
+            <div class="flex gap-4">
+                <label class="form-check">
+                    <input type="checkbox" name="permissions" value="read" checked>
+                    <span>Read (view data)</span>
+                </label>
+                <label class="form-check">
+                    <input type="checkbox" name="permissions" value="write" checked>
+                    <span>Write (create, update, delete)</span>
+                </label>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">🔑 Generate API Key</button>
+    </form>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 API Documentation</h3>
+    
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <h4 style="color: var(--accent-yellow); margin-bottom: 0.5rem;">Authentication</h4>
+        <code style="background: var(--bg-light); padding: 0.25rem 0.5rem; border-radius: 4px; display: block;">
+            Header: X-API-Key: inv_your_api_key_here
+        </code>
+    </div>
+    
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px;">
+        <h4 style="color: var(--accent-green); margin-bottom: 0.5rem;">Endpoints</h4>
+        <table style="width: 100%; font-size: 0.9rem;">
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>GET/POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/customers</code></td>
+                <td style="padding: 0.5rem;">List/Create customers</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>GET/PUT/DELETE</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/customers/{id}</code></td>
+                <td style="padding: 0.5rem;">Manage customer</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>GET/POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/products</code></td>
+                <td style="padding: 0.5rem;">List/Create products</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>GET/POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/invoices</code></td>
+                <td style="padding: 0.5rem;">List/Create invoices</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/invoices/{id}/payments</code></td>
+                <td style="padding: 0.5rem;">Add payment</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem;"><code>POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/v1/invoices/{id}/mark-paid</code></td>
+                <td style="padding: 0.5rem;">Mark as paid</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem;"><code>POST</code></td>
+                <td style="padding: 0.5rem;"><code>/api/webhook/payment</code></td>
+                <td style="padding: 0.5rem;">External payment webhook</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">Your API Keys</h3>
+    
+    {% if api_keys %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Permissions</th>
+                <th>Created</th>
+                <th>Last Used</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key in api_keys %}
+            <tr>
+                <td><strong>{{ key.name }}</strong></td>
+                <td>
+                    {% for perm in key.permissions %}
+                    <span class="badge {% if perm == 'read' %}badge-sent{% else %}badge-paid{% endif %}">{{ perm }}</span>
+                    {% endfor %}
+                </td>
+                <td>{{ key.created_at.strftime('%Y-%m-%d') if key.created_at else '-' }}</td>
+                <td>{{ key.last_used.strftime('%Y-%m-%d %H:%M') if key.last_used else 'Never' }}</td>
+                <td>
+                    {% if key.active %}
+                    <span class="badge badge-paid">Active</span>
+                    {% else %}
+                    <span class="badge badge-cancelled">Revoked</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if key.active %}
+                    <form method="POST" action="{{ url_for('revoke_api_key_route', key_id=key.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary btn-sm">Revoke</button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('delete_api_key_route', key_id=key.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔑</div>
+        <h3 class="empty-state-title">No API Keys</h3>
+        <p>Create your first API key to access your data programmatically.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('settings') }}" class="btn btn-secondary">← Back to Settings</a>
+    <a href="{{ url_for('webhooks') }}" class="btn btn-secondary">🔔 Manage Webhooks</a>
+</div>
+{% endblock %}

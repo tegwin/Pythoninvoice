@@ -1,0 +1,1084 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation - Invoice Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📚 API Documentation</h1>
+    <p class="page-subtitle">Complete guide to using the Invoice Manager API</p>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">🔗 Quick Links</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        <a href="#authentication" class="btn btn-secondary btn-sm">Authentication</a>
+        <a href="#customers" class="btn btn-secondary btn-sm">Customers API</a>
+        <a href="#products" class="btn btn-secondary btn-sm">Products API</a>
+        <a href="#invoices" class="btn btn-secondary btn-sm">Invoices API</a>
+        <a href="#payments" class="btn btn-secondary btn-sm">Payments API</a>
+        <a href="#bulk" class="btn btn-secondary btn-sm">Bulk Import</a>
+        <a href="#recurring" class="btn btn-primary btn-sm">🔄 Recurring API</a>
+        <a href="#suppliers" class="btn btn-secondary btn-sm">🏭 Suppliers API</a>
+        <a href="#bills" class="btn btn-secondary btn-sm">📃 Bills API</a>
+        <a href="#expenses" class="btn btn-secondary btn-sm">🧾 Expenses API</a>
+        <a href="#webhooks" class="btn btn-secondary btn-sm">Webhooks</a>
+        <a href="#examples" class="btn btn-secondary btn-sm">Code Examples</a>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📖 Overview</h3>
+    <p>The Invoice Manager provides a full REST API for programmatic access to all data. This allows you to integrate with other systems, automate invoice creation, receive payment notifications, and more.</p>
+    
+    <div class="code-block">
+        <strong>Base URL:</strong> <code>{{ request.host_url }}api/v1</code>
+    </div>
+</div>
+
+<div class="panel mb-4" id="authentication">
+    <h3 class="section-title" style="margin-top: 0;">🔐 Authentication</h3>
+    <p>All API requests require an API key. Create keys at <a href="{{ url_for('api_keys') }}">Settings → API Keys</a>.</p>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1.5rem;">Option 1: Header (Recommended)</h4>
+    <div class="code-block">
+        <code>X-API-Key: inv_your_api_key_here</code>
+    </div>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1rem;">Option 2: Query Parameter</h4>
+    <div class="code-block">
+        <code>?api_key=inv_your_api_key_here</code>
+    </div>
+    
+    <h4 style="color: var(--accent-blue); margin-top: 1.5rem;">API Key Permissions</h4>
+    <ul style="margin-left: 1.5rem;">
+        <li><strong>read</strong> - Can view data (GET requests)</li>
+        <li><strong>write</strong> - Can create, update, delete (POST, PUT, DELETE)</li>
+    </ul>
+    
+    <h4 style="color: var(--accent-green); margin-top: 1.5rem;">Response Format</h4>
+    <div class="code-block">
+<pre style="margin: 0;"># Success
+{
+  "success": true,
+  "data": { ... }
+}
+
+# Error
+{
+  "success": false,
+  "error": "Error description"
+}</pre>
+    </div>
+</div>
+
+<div class="panel mb-4" id="customers">
+    <h3 class="section-title" style="margin-top: 0;">👥 Customers API</h3>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/customers</h4>
+        <p>List all customers</p>
+        <div class="code-block">
+<pre style="margin: 0;">curl -X GET "{{ request.host_url }}api/v1/customers" \
+  -H "X-API-Key: inv_your_key"</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/customers/{id}</h4>
+        <p>Get a single customer by ID</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/customers</h4>
+        <p>Create a new customer</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>name</code></td><td>string</td><td>✅ Yes</td><td>Customer name</td></tr>
+                <tr><td><code>email</code></td><td>string</td><td>No</td><td>Email address</td></tr>
+                <tr><td><code>phone</code></td><td>string</td><td>No</td><td>Phone number</td></tr>
+                <tr><td><code>tax_number</code></td><td>string</td><td>No</td><td>VAT/Tax ID</td></tr>
+                <tr><td><code>address.line1</code></td><td>string</td><td>No</td><td>Street address</td></tr>
+                <tr><td><code>address.line2</code></td><td>string</td><td>No</td><td>Address line 2</td></tr>
+                <tr><td><code>address.city</code></td><td>string</td><td>No</td><td>City</td></tr>
+                <tr><td><code>address.state</code></td><td>string</td><td>No</td><td>State/Province</td></tr>
+                <tr><td><code>address.postal_code</code></td><td>string</td><td>No</td><td>Postal code</td></tr>
+                <tr><td><code>address.country</code></td><td>string</td><td>No</td><td>Country</td></tr>
+                <tr><td><code>custom_tax_rate</code></td><td>number</td><td>No</td><td>Override default tax %</td></tr>
+                <tr><td><code>custom_currency</code></td><td>string</td><td>No</td><td>Override currency (GBP, USD, etc)</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>No</td><td>Internal notes</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/customers" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corporation",
+    "email": "billing@acme.com",
+    "phone": "+44 20 1234 5678",
+    "address": {
+      "line1": "123 Business Street",
+      "city": "London",
+      "postal_code": "EC1A 1BB",
+      "country": "United Kingdom"
+    },
+    "tax_number": "GB123456789",
+    "custom_tax_rate": 20.0,
+    "custom_currency": "GBP"
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/customers/{id}</h4>
+        <p>Update a customer (send only fields to update)</p>
+        <div class="code-block">
+<pre style="margin: 0;">curl -X PUT "{{ request.host_url }}api/v1/customers/1" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "new@acme.com"}'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/customers/{id}</h4>
+        <p>Delete a customer</p>
+    </div>
+</div>
+
+<div class="panel mb-4" id="products">
+    <h3 class="section-title" style="margin-top: 0;">📦 Products API</h3>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/products</h4>
+        <p>List all products</p>
+        <div class="code-block">
+<pre style="margin: 0;"># Response includes all product fields:
+{
+  "id": 1,
+  "name": "Web Development",
+  "description": "Custom web development services",
+  "unit_price": 150.00,
+  "unit": "hour",
+  "sku": "WEB-DEV-001",
+  "is_service": true,
+  "billing_term": "monthly",
+  "taxable": true,
+  "coa_id": 2,
+  "active": true,
+  "created_at": "2026-01-01T10:00:00",
+  "updated_at": "2026-01-01T10:00:00"
+}</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/products</h4>
+        <p>Create a new product or service</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>name</code></td><td>string</td><td>✅ Yes</td><td>Product name</td></tr>
+                <tr><td><code>description</code></td><td>string</td><td>No</td><td>Description</td></tr>
+                <tr><td><code>sku</code></td><td>string</td><td>No</td><td>Product code/SKU</td></tr>
+                <tr><td><code>unit_price</code></td><td>number</td><td>No</td><td>Price per unit (default: 0)</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td>No</td><td>Unit type (hour, piece, license, etc.)</td></tr>
+                <tr><td><code>is_service</code></td><td>boolean</td><td>No</td><td>Is this a service? (default: false)</td></tr>
+                <tr><td><code>billing_term</code></td><td>string</td><td>No</td><td>For services: weekly, monthly, quarterly, biannually, annually</td></tr>
+                <tr><td><code>taxable</code></td><td>boolean</td><td>No</td><td>Apply tax when added to invoice? (default: true)</td></tr>
+                <tr><td><code>coa_id</code></td><td>integer</td><td>No</td><td>Chart of Accounts ID for reporting</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/products" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Monthly Retainer",
+    "description": "Monthly consulting retainer",
+    "unit_price": 2500.00,
+    "unit": "month",
+    "is_service": true,
+    "billing_term": "monthly",
+    "taxable": true,
+    "coa_id": 2
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/products/{id}</h4>
+        <p>Update a product - all fields from POST are supported, plus:</p>
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>active</code></td><td>boolean</td><td>Set to false to deactivate</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/products/{id}</h4>
+        <p>Deactivate a product (preserves history for existing invoices)</p>
+    </div>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1.5rem;">Billing Terms</h4>
+    <p class="text-muted">For recurring services, use these billing_term values:</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+        <code>weekly</code>
+        <code>monthly</code>
+        <code>quarterly</code>
+        <code>biannually</code>
+        <code>annually</code>
+    </div>
+</div>
+
+<div class="panel mb-4" id="invoices">
+    <h3 class="section-title" style="margin-top: 0;">📄 Invoices API</h3>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/invoices</h4>
+        <p>List all invoices. Optional filter: <code>?status=sent</code></p>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">
+            Status options: <code>draft</code>, <code>sent</code>, <code>paid</code>, <code>partial</code>, <code>overdue</code>, <code>cancelled</code>
+        </p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/invoices</h4>
+        <p>Create a new invoice</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>customer_id</code></td><td>integer</td><td>Link to customer</td></tr>
+                <tr><td><code>currency</code></td><td>string</td><td>GBP, USD, EUR, ZAR, etc</td></tr>
+                <tr><td><code>tax_rate</code></td><td>number</td><td>Tax percentage</td></tr>
+                <tr><td><code>issue_date</code></td><td>string</td><td>YYYY-MM-DD (default: today)</td></tr>
+                <tr><td><code>due_date</code></td><td>string</td><td>YYYY-MM-DD (default: +30 days)</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>Notes on invoice</td></tr>
+                <tr><td><code>payment_terms</code></td><td>string</td><td>Payment terms text</td></tr>
+                <tr><td><code>items</code></td><td>array</td><td>Line items (see below)</td></tr>
+            </tbody>
+        </table>
+        
+        <h5 style="color: var(--accent-yellow);">Line Item Fields:</h5>
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>description</code></td><td>string</td><td>Item description (required)</td></tr>
+                <tr><td><code>quantity</code></td><td>number</td><td>Quantity (default: 1)</td></tr>
+                <tr><td><code>unit_price</code></td><td>number</td><td>Price per unit</td></tr>
+                <tr><td><code>product_id</code></td><td>integer</td><td>Link to product (optional)</td></tr>
+                <tr><td><code>tax_rate</code></td><td>number</td><td>Override tax for this item</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/invoices" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": 1,
+    "currency": "GBP",
+    "tax_rate": 20,
+    "items": [
+      {
+        "description": "Consulting - January 2024",
+        "quantity": 10,
+        "unit_price": 150.00
+      },
+      {
+        "description": "Software License",
+        "quantity": 1,
+        "unit_price": 500.00
+      }
+    ],
+    "notes": "Thank you for your business!",
+    "payment_terms": "Due within 30 days"
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/invoices/{id}</h4>
+        <p>Update an invoice. Note: providing <code>items</code> replaces all existing items.</p>
+        <div class="code-block">
+<pre style="margin: 0;"># Update status to sent
+curl -X PUT "{{ request.host_url }}api/v1/invoices/1" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "sent"}'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/invoices/{id}</h4>
+        <p>Delete an invoice</p>
+    </div>
+</div>
+
+<div class="panel mb-4" id="payments">
+    <h3 class="section-title" style="margin-top: 0;">💳 Payments API</h3>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/invoices/{id}/payments</h4>
+        <p>Add a payment to an invoice</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>amount</code></td><td>number</td><td>✅ Yes</td><td>Payment amount</td></tr>
+                <tr><td><code>payment_method</code></td><td>string</td><td>No</td><td>Bank Transfer, Card, PayPal, etc</td></tr>
+                <tr><td><code>reference</code></td><td>string</td><td>No</td><td>Transaction reference</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>No</td><td>Payment notes</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/invoices/1/payments" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500.00,
+    "payment_method": "Bank Transfer",
+    "reference": "TXN-12345"
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/invoices/{id}/mark-paid</h4>
+        <p>Mark invoice as fully paid (adds payment for remaining balance)</p>
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/invoices/1/mark-paid" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"payment_method": "Bank Transfer"}'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/webhook/payment</h4>
+        <p>External payment webhook - for payment processors (Stripe, PayPal, etc)</p>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/webhook/payment" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoice_number": "INV-00001",
+    "amount": 1800.00,
+    "payment_method": "Stripe",
+    "reference": "pi_abc123"
+  }'</pre>
+        </div>
+    </div>
+</div>
+
+<div class="panel mb-4" id="bulk">
+    <h3 class="section-title" style="margin-top: 0;">📦 Bulk Import API</h3>
+    <p>Import multiple records in a single API call for efficient data migration.</p>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/customers/bulk</h4>
+        <p>Bulk import customers. Set <code>update_existing: true</code> to update records with matching emails.</p>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/customers/bulk" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customers": [
+      {"name": "Customer One", "email": "c1@example.com", "custom_tax_rate": 20},
+      {"name": "Customer Two", "email": "c2@example.com", "city": "London"},
+      {"name": "Customer Three", "email": "c3@example.com", "custom_tax_rate": 0}
+    ],
+    "update_existing": false
+  }'</pre>
+        </div>
+        <p style="margin-top: 0.5rem;"><strong>Response:</strong> <code>{"imported": 3, "updated": 0, "errors": [], "created_ids": [10, 11, 12]}</code></p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/products/bulk</h4>
+        <p>Bulk import products. Set <code>update_existing: true</code> to update records with matching SKU or name.</p>
+        
+        <p style="font-size: 0.9rem; margin: 0.5rem 0;"><strong>Supported fields:</strong> name, description, sku, unit_price, unit, is_service, billing_term, taxable, coa_id</p>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/products/bulk" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "products": [
+      {
+        "name": "Monthly Retainer",
+        "unit_price": 2500,
+        "sku": "RET-001",
+        "is_service": true,
+        "billing_term": "monthly",
+        "taxable": true,
+        "coa_id": 2
+      },
+      {
+        "name": "Software License",
+        "unit_price": 500,
+        "sku": "LIC-001",
+        "billing_term": "annually"
+      },
+      {
+        "name": "Setup Fee",
+        "unit_price": 200,
+        "sku": "SETUP-001",
+        "is_service": true,
+        "taxable": true
+      }
+    ],
+    "update_existing": true
+  }'</pre>
+        </div>
+        <p style="margin-top: 0.5rem;"><strong>Response:</strong> <code>{"imported": 2, "updated": 1, "errors": [], "created_ids": [5, 6]}</code></p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/invoices/bulk</h4>
+        <p>Bulk import invoices with line items. Use <code>customer_id</code> or <code>customer_email</code> to identify customer.</p>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/invoices/bulk" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoices": [
+      {
+        "customer_id": 1,
+        "currency": "GBP",
+        "tax_rate": 20,
+        "status": "sent",
+        "items": [
+          {"description": "Web Development", "quantity": 40, "unit_price": 75},
+          {"description": "Hosting", "quantity": 1, "unit_price": 200}
+        ]
+      },
+      {
+        "customer_email": "billing@acme.com",
+        "tax_rate": 0,
+        "items": [{"description": "Consulting", "quantity": 10, "unit_price": 150}]
+      }
+    ]
+  }'</pre>
+        </div>
+        <p style="margin-top: 0.5rem;"><strong>Response:</strong> <code>{"imported": 2, "errors": [], "created_ids": [101, 102]}</code></p>
+    </div>
+</div>
+
+<div class="panel mb-4" id="recurring">
+    <h3 class="section-title" style="margin-top: 0;">🔄 Recurring Invoices API</h3>
+    <p>Manage recurring invoice templates and automate invoice generation. Perfect for use with <strong>n8n</strong>, Zapier, or cron jobs.</p>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">GET</span> /api/v1/recurring</h4>
+        <p class="text-muted">List all recurring invoice templates</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">GET</span> /api/v1/recurring/{id}</h4>
+        <p class="text-muted">Get a specific recurring invoice with all items</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">GET</span> /api/v1/recurring/due</h4>
+        <p class="text-muted">Get recurring invoices that are due for generation today or earlier</p>
+        <div class="code-block">
+<pre style="margin: 0;"># Response
+{
+  "success": true,
+  "data": {
+    "count": 3,
+    "due_invoices": [
+      {"id": 1, "customer_name": "Acme Corp", "next_invoice_date": "2026-01-01"}
+    ]
+  }
+}</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint" style="border-left-color: var(--accent-green);">
+        <h4><span class="badge badge-sent">POST</span> /api/v1/recurring/generate ⭐</h4>
+        <p><strong>Main automation endpoint</strong> - Generate ALL due recurring invoices at once</p>
+        <p class="text-muted">Call this from n8n, Zapier, or a scheduled task to automatically generate invoices.</p>
+        <div class="code-block">
+<pre style="margin: 0;"># Example with curl
+curl -X POST "{{ request.host_url }}api/v1/recurring/generate" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json"
+
+# Response
+{
+  "success": true,
+  "data": {
+    "generated_count": 3,
+    "error_count": 0,
+    "generated": [
+      {
+        "recurring_id": 1,
+        "invoice_id": 156,
+        "invoice_number": "REC-00156",
+        "customer_name": "Acme Corp",
+        "total": 1500.00
+      }
+    ],
+    "errors": null
+  }
+}</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">POST</span> /api/v1/recurring/{id}/generate</h4>
+        <p class="text-muted">Generate a single recurring invoice immediately (regardless of due date)</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">POST</span> /api/v1/recurring/{id}/toggle</h4>
+        <p class="text-muted">Pause or resume a recurring invoice</p>
+    </div>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1.5rem;">📋 n8n Setup Example</h4>
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+        <ol style="margin: 0; padding-left: 1.5rem;">
+            <li>Add a <strong>Schedule Trigger</strong> node (e.g., daily at 6:00 AM)</li>
+            <li>Add an <strong>HTTP Request</strong> node with:
+                <ul>
+                    <li>Method: <code>POST</code></li>
+                    <li>URL: <code>{{ request.host_url }}api/v1/recurring/generate</code></li>
+                    <li>Header: <code>X-API-Key: your-api-key</code></li>
+                </ul>
+            </li>
+            <li>Optionally add notification nodes for generated invoices</li>
+        </ol>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SUPPLIERS API -->
+<!-- ============================================ -->
+<div class="panel mb-4" id="suppliers">
+    <h3 class="section-title" style="margin-top: 0;">🏭 Suppliers API</h3>
+    <p>Manage suppliers for bills and expenses in your accounts payable.</p>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/suppliers</h4>
+        <p>List all suppliers</p>
+        <p class="text-muted">Query params: <code>include_inactive=true</code> to include inactive suppliers</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/suppliers/{id}</h4>
+        <p>Get a single supplier by ID</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/suppliers</h4>
+        <p>Create a new supplier</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>name</code></td><td>string</td><td>✅ Yes</td><td>Supplier name</td></tr>
+                <tr><td><code>contact_name</code></td><td>string</td><td>No</td><td>Contact person</td></tr>
+                <tr><td><code>email</code></td><td>string</td><td>No</td><td>Email address</td></tr>
+                <tr><td><code>phone</code></td><td>string</td><td>No</td><td>Phone number</td></tr>
+                <tr><td><code>address.line1</code></td><td>string</td><td>No</td><td>Street address</td></tr>
+                <tr><td><code>address.city</code></td><td>string</td><td>No</td><td>City</td></tr>
+                <tr><td><code>address.postal_code</code></td><td>string</td><td>No</td><td>Postal code</td></tr>
+                <tr><td><code>address.country</code></td><td>string</td><td>No</td><td>Country</td></tr>
+                <tr><td><code>tax_id</code></td><td>string</td><td>No</td><td>VAT/Tax ID</td></tr>
+                <tr><td><code>payment_terms</code></td><td>integer</td><td>No</td><td>Default payment days (e.g., 30)</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>No</td><td>Internal notes</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/suppliers" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Office Supplies Ltd",
+    "contact_name": "John Smith",
+    "email": "accounts@officesupplies.com",
+    "address": {
+      "line1": "123 Business Park",
+      "city": "London",
+      "postal_code": "SW1A 1AA",
+      "country": "United Kingdom"
+    },
+    "tax_id": "GB123456789",
+    "payment_terms": 30
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/suppliers/{id}</h4>
+        <p>Update a supplier (partial updates supported)</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/suppliers/{id}</h4>
+        <p>Deactivate a supplier (soft delete)</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/suppliers/import</h4>
+        <p>Bulk import suppliers</p>
+        <div class="code-block">
+<pre style="margin: 0;">{
+  "update_existing": true,
+  "suppliers": [
+    {"name": "Supplier One", "email": "one@supplier.com", "payment_terms": 30},
+    {"name": "Supplier Two", "email": "two@supplier.com", "payment_terms": 14}
+  ]
+}</pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- BILLS API -->
+<!-- ============================================ -->
+<div class="panel mb-4" id="bills">
+    <h3 class="section-title" style="margin-top: 0;">📃 Bills API</h3>
+    <p>Track invoices from your suppliers (accounts payable).</p>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/bills</h4>
+        <p>List all bills</p>
+        <p class="text-muted">Query params: <code>status</code> (draft, approved, partial, paid, cancelled), <code>supplier_id</code></p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/bills/{id}</h4>
+        <p>Get a single bill by ID</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/bills</h4>
+        <p>Create a new bill</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>supplier_id</code></td><td>integer</td><td>✅ Yes</td><td>Supplier ID</td></tr>
+                <tr><td><code>items</code></td><td>array</td><td>✅ Yes</td><td>Line items array</td></tr>
+                <tr><td><code>bill_number</code></td><td>string</td><td>No</td><td>Your reference number</td></tr>
+                <tr><td><code>reference</code></td><td>string</td><td>No</td><td>Supplier's invoice number</td></tr>
+                <tr><td><code>bill_date</code></td><td>string</td><td>No</td><td>Date (YYYY-MM-DD)</td></tr>
+                <tr><td><code>due_date</code></td><td>string</td><td>No</td><td>Due date (YYYY-MM-DD)</td></tr>
+                <tr><td><code>currency</code></td><td>string</td><td>No</td><td>Currency code (GBP, USD, etc)</td></tr>
+                <tr><td><code>tax_rate</code></td><td>number</td><td>No</td><td>Tax percentage</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>No</td><td>Internal notes</td></tr>
+                <tr><td><code>attachment_base64</code></td><td>string</td><td>No</td><td>Base64-encoded PDF/image of supplier invoice</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/bills" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "supplier_id": 1,
+    "reference": "SUP-INV-12345",
+    "bill_date": "2026-01-20",
+    "due_date": "2026-02-19",
+    "tax_rate": 20,
+    "items": [
+      {"description": "Office Supplies", "quantity": 1, "unit_price": 250.00, "coa_id": 12}
+    ],
+    "attachment_base64": "data:application/pdf;base64,JVBERi0xLjQK..."
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/bills/{id}</h4>
+        <p>Update a bill. Use <code>remove_attachment: true</code> to remove attachment.</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/bills/{id}</h4>
+        <p>Delete a bill (draft status only)</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/bills/{id}/payments</h4>
+        <p>Record a payment on a bill</p>
+        <div class="code-block">
+<pre style="margin: 0;">{
+  "amount": 250.00,
+  "payment_date": "2026-02-01",
+  "payment_method": "Bank Transfer",
+  "reference": "TXN-12345"
+}</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PATCH</span> /api/v1/bills/{id}/status</h4>
+        <p>Update bill status</p>
+        <div class="code-block">
+<pre style="margin: 0;">{"status": "approved"}  // draft, approved, paid, cancelled</pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- EXPENSES API -->
+<!-- ============================================ -->
+<div class="panel mb-4" id="expenses">
+    <h3 class="section-title" style="margin-top: 0;">🧾 Expenses API</h3>
+    <p>Track business expenses with receipt attachments. Perfect for mobile expense apps.</p>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/expenses</h4>
+        <p>List all expenses</p>
+        <p class="text-muted">Query params: <code>category</code>, <code>status</code> (pending, approved, rejected, reimbursed), <code>date_from</code>, <code>date_to</code></p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/expenses/{id}</h4>
+        <p>Get a single expense by ID</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/expenses</h4>
+        <p>Create a new expense</p>
+        
+        <table class="data-table" style="margin: 1rem 0;">
+            <thead>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>description</code></td><td>string</td><td>✅ Yes</td><td>Expense description</td></tr>
+                <tr><td><code>amount</code></td><td>number</td><td>✅ Yes</td><td>Total amount</td></tr>
+                <tr><td><code>expense_date</code></td><td>string</td><td>No</td><td>Date (YYYY-MM-DD)</td></tr>
+                <tr><td><code>category</code></td><td>string</td><td>No</td><td>Category (see /expenses/categories)</td></tr>
+                <tr><td><code>currency</code></td><td>string</td><td>No</td><td>Currency code</td></tr>
+                <tr><td><code>tax_rate</code></td><td>number</td><td>No</td><td>Tax percentage</td></tr>
+                <tr><td><code>payment_method</code></td><td>string</td><td>No</td><td>How it was paid</td></tr>
+                <tr><td><code>reference</code></td><td>string</td><td>No</td><td>Transaction reference</td></tr>
+                <tr><td><code>is_billable</code></td><td>boolean</td><td>No</td><td>Billable to client?</td></tr>
+                <tr><td><code>is_reimbursable</code></td><td>boolean</td><td>No</td><td>Needs reimbursement?</td></tr>
+                <tr><td><code>notes</code></td><td>string</td><td>No</td><td>Additional notes</td></tr>
+                <tr><td><code>receipt_base64</code></td><td>string</td><td>No</td><td>Base64-encoded receipt image/PDF</td></tr>
+            </tbody>
+        </table>
+        
+        <div class="code-block">
+<pre style="margin: 0;">curl -X POST "{{ request.host_url }}api/v1/expenses" \
+  -H "X-API-Key: inv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Client lunch meeting",
+    "amount": 85.50,
+    "expense_date": "2026-01-20",
+    "category": "Meals & Dining",
+    "payment_method": "Company Card",
+    "is_billable": true,
+    "receipt_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+  }'</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-partial">PUT</span> /api/v1/expenses/{id}</h4>
+        <p>Update an expense. Use <code>remove_receipt: true</code> to remove receipt.</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">DELETE</span> /api/v1/expenses/{id}</h4>
+        <p>Delete an expense</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-paid">POST</span> /api/v1/expenses/{id}/approve</h4>
+        <p>Approve an expense</p>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-overdue">POST</span> /api/v1/expenses/{id}/reject</h4>
+        <p>Reject an expense</p>
+        <div class="code-block">
+<pre style="margin: 0;">{"reason": "Missing receipt"}  // Optional rejection reason</pre>
+        </div>
+    </div>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/expenses/categories</h4>
+        <p>Get available categories and payment methods</p>
+        <div class="code-block">
+<pre style="margin: 0;">{
+  "categories": ["Meals & Dining", "Travel & Transport", "Office Supplies", ...],
+  "payment_methods": ["Cash", "Company Card", "Personal Card (Reimbursable)", ...]
+}</pre>
+        </div>
+    </div>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1.5rem;">📱 Mobile App Integration</h4>
+    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+        <p style="margin: 0 0 0.5rem 0;">The <code>receipt_base64</code> field is ideal for mobile expense apps:</p>
+        <ol style="margin: 0; padding-left: 1.5rem;">
+            <li>User takes photo of receipt</li>
+            <li>App converts to base64 (prefix with <code>data:image/jpeg;base64,</code>)</li>
+            <li>POST to /api/v1/expenses with receipt_base64</li>
+            <li>Receipt is stored and linked to expense</li>
+        </ol>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ACCOUNTS PAYABLE SUMMARY -->
+<!-- ============================================ -->
+<div class="panel mb-4" id="ap-summary">
+    <h3 class="section-title" style="margin-top: 0;">📊 Accounts Payable Summary</h3>
+    
+    <div class="api-endpoint">
+        <h4><span class="badge badge-sent">GET</span> /api/v1/accounts-payable/summary</h4>
+        <p>Get summary statistics for bills and expenses</p>
+        <div class="code-block">
+<pre style="margin: 0;">{
+  "bills": {
+    "total_bills": 25,
+    "draft_count": 3,
+    "approved_count": 8,
+    "paid_count": 14,
+    "total_outstanding": 2450.00,
+    "total_overdue": 350.00
+  },
+  "expenses": {
+    "total_expenses": 150,
+    "total_amount": 8500.00,
+    "pending_amount": 450.00,
+    "approved_amount": 6800.00,
+    "reimbursable_amount": 850.00
+  }
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="panel mb-4" id="webhooks">
+    <h3 class="section-title" style="margin-top: 0;">🔔 Outbound Webhooks</h3>
+    <p>Configure webhooks at <a href="{{ url_for('webhooks') }}">Settings → Webhooks</a> to receive notifications when events happen.</p>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1.5rem;">Available Events</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; margin: 1rem 0;">
+        <code>invoice.created</code>
+        <code>invoice.updated</code>
+        <code>invoice.deleted</code>
+        <code>invoice.sent</code>
+        <code>invoice.paid</code>
+        <code>invoice.partially_paid</code>
+        <code>customer.created</code>
+        <code>customer.updated</code>
+        <code>customer.deleted</code>
+        <code>product.created</code>
+        <code>product.updated</code>
+        <code>payment.received</code>
+    </div>
+    
+    <h4 style="color: var(--accent-green); margin-top: 1.5rem;">Webhook Payload</h4>
+    <div class="code-block">
+<pre style="margin: 0;">{
+  "event": "invoice.paid",
+  "timestamp": "2024-01-20T14:30:00Z",
+  "webhook_id": "wh_abc123",
+  "data": {
+    "id": 1,
+    "invoice_number": "INV-00001",
+    "status": "paid",
+    "total": 1800.00,
+    ...
+  }
+}</pre>
+    </div>
+    
+    <h4 style="color: var(--accent-blue); margin-top: 1.5rem;">Headers Sent</h4>
+    <div class="code-block">
+<pre style="margin: 0;">Content-Type: application/json
+User-Agent: InvoiceManager-Webhook/1.0
+X-Webhook-Event: invoice.paid
+X-Webhook-Signature: sha256=abc123...</pre>
+    </div>
+    
+    <h4 style="color: var(--accent-red); margin-top: 1.5rem;">Verifying Signatures (Python)</h4>
+    <div class="code-block">
+<pre style="margin: 0;">import hmac, hashlib
+
+def verify_signature(payload, signature, secret):
+    expected = 'sha256=' + hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)</pre>
+    </div>
+</div>
+
+<div class="panel mb-4" id="examples">
+    <h3 class="section-title" style="margin-top: 0;">💻 Code Examples</h3>
+    
+    <h4 style="color: var(--accent-yellow); margin-top: 1rem;">Python</h4>
+    <div class="code-block">
+<pre style="margin: 0;">import requests
+
+API_KEY = "inv_your_key"
+BASE = "{{ request.host_url }}api/v1"
+headers = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
+
+# Create invoice
+invoice = {
+    "customer_id": 1,
+    "currency": "GBP",
+    "tax_rate": 20,
+    "items": [
+        {"description": "Consulting", "quantity": 10, "unit_price": 150}
+    ]
+}
+response = requests.post(f"{BASE}/invoices", json=invoice, headers=headers)
+print(response.json())</pre>
+    </div>
+    
+    <h4 style="color: var(--accent-green); margin-top: 1.5rem;">JavaScript / Node.js</h4>
+    <div class="code-block">
+<pre style="margin: 0;">const axios = require('axios');
+
+const API_KEY = 'inv_your_key';
+const BASE = '{{ request.host_url }}api/v1';
+const headers = { 'X-API-Key': API_KEY };
+
+// Create invoice
+const invoice = {
+  customer_id: 1,
+  currency: 'GBP',
+  tax_rate: 20,
+  items: [
+    { description: 'Consulting', quantity: 10, unit_price: 150 }
+  ]
+};
+
+axios.post(`${BASE}/invoices`, invoice, { headers })
+  .then(res => console.log(res.data));</pre>
+    </div>
+    
+    <h4 style="color: var(--accent-blue); margin-top: 1.5rem;">PowerShell</h4>
+    <div class="code-block">
+<pre style="margin: 0;">$Headers = @{
+    "X-API-Key" = "inv_your_key"
+    "Content-Type" = "application/json"
+}
+
+$Invoice = @{
+    customer_id = 1
+    currency = "GBP"
+    tax_rate = 20
+    items = @(
+        @{ description = "Consulting"; quantity = 10; unit_price = 150 }
+    )
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "{{ request.host_url }}api/v1/invoices" `
+  -Method Post -Headers $Headers -Body $Invoice</pre>
+    </div>
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">❓ Error Codes</h3>
+    <table class="data-table">
+        <thead>
+            <tr><th>Code</th><th>Meaning</th><th>Solution</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>401</code></td>
+                <td>Unauthorized</td>
+                <td>Include valid API key in X-API-Key header</td>
+            </tr>
+            <tr>
+                <td><code>403</code></td>
+                <td>Forbidden</td>
+                <td>API key needs 'write' permission</td>
+            </tr>
+            <tr>
+                <td><code>404</code></td>
+                <td>Not Found</td>
+                <td>Check the ID exists</td>
+            </tr>
+            <tr>
+                <td><code>400</code></td>
+                <td>Bad Request</td>
+                <td>Check required fields and JSON format</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<style>
+.api-endpoint {
+    background: var(--bg-dark);
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border-left: 3px solid var(--accent-blue);
+}
+.api-endpoint h4 {
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.api-endpoint h4 .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+}
+.code-block {
+    background: var(--bg-dark);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+.code-block code {
+    color: var(--accent-yellow);
+}
+.code-block pre {
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+</style>
+{% endblock %}

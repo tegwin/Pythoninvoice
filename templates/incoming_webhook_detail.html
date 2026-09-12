@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}{{ webhook.name }} - Incoming Webhook{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📥 {{ webhook.name }}</h1>
+    <p class="page-subtitle">{{ providers[webhook.provider].name if webhook.provider in providers else webhook.provider }} webhook endpoint</p>
+</div>
+
+<div class="panel mb-4">
+    <div class="flex gap-2">
+        <a href="{{ url_for('incoming_webhooks') }}" class="btn btn-secondary">← Back to Webhooks</a>
+        <form method="POST" action="{{ url_for('toggle_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+            <button type="submit" class="btn btn-secondary">
+                {% if webhook.active %}⏸️ Disable{% else %}▶️ Enable{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">🔗 Endpoint Configuration</h3>
+    
+    <div class="form-group">
+        <label class="form-label">Webhook URL</label>
+        <div class="flex gap-2" style="align-items: center;">
+            <code style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border-radius: 6px; word-break: break-all;">
+                {{ request.host_url }}webhook/incoming/{{ webhook.endpoint_key }}
+            </code>
+            <button class="btn btn-secondary" onclick="copyToClipboard('{{ request.host_url }}webhook/incoming/{{ webhook.endpoint_key }}')">📋 Copy</button>
+        </div>
+        <small class="text-muted">Add this URL to your payment provider's webhook settings</small>
+    </div>
+    
+    <div class="form-group">
+        <label class="form-label">Secret Key</label>
+        <div class="flex gap-2" style="align-items: center;">
+            <code id="secret-key" style="flex: 1; padding: 0.75rem; background: var(--bg-dark); border-radius: 6px;">
+                <span id="secret-hidden">••••••••••••••••••••••••••••••••</span>
+                <span id="secret-visible" style="display: none;">{{ webhook.secret_key }}</span>
+            </code>
+            <button class="btn btn-secondary" onclick="toggleSecret()">👁️</button>
+            <button class="btn btn-secondary" onclick="copyToClipboard('{{ webhook.secret_key }}')">📋</button>
+        </div>
+        <small class="text-muted">Use this to verify webhook signatures (if supported by provider)</small>
+    </div>
+    
+    <form method="POST" action="{{ url_for('regenerate_webhook_secret', webhook_id=webhook.id) }}" style="display: inline;">
+        <button type="submit" class="btn btn-secondary" onclick="return confirm('Regenerate secret key? You will need to update the key in your provider settings.');">🔄 Regenerate Secret</button>
+    </form>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📊 Statistics</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-blue);">{{ webhook.receive_count or 0 }}</div>
+            <div class="text-muted">Total Received</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-green);">{{ logs|selectattr('status', 'equalto', 'success')|list|length }}</div>
+            <div class="text-muted">Successful</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-red);">{{ logs|selectattr('status', 'equalto', 'error')|list|length }}</div>
+            <div class="text-muted">Errors</div>
+        </div>
+        <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; text-align: center;">
+            <div style="font-size: 1rem; color: var(--text-secondary);">
+                {% if webhook.last_received_at %}
+                {{ webhook.last_received_at.strftime('%Y-%m-%d %H:%M') if webhook.last_received_at else 'N/A' }}
+                {% else %}
+                Never
+                {% endif %}
+            </div>
+            <div class="text-muted">Last Received</div>
+        </div>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <h3 class="section-title" style="margin-top: 0;">📋 Expected Payload Format</h3>
+    
+    {% if webhook.provider == 'generic' %}
+    <p class="text-muted">For generic webhooks, send a JSON payload with these fields:</p>
+    <div class="code-block" style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+<pre style="margin: 0; color: var(--text-primary);">{
+  "invoice_id": 123,           // OR
+  "invoice_number": "INV-001", // Either one to identify invoice
+  "amount": 150.00,            // Payment amount
+  "reference": "txn_abc123"    // Transaction reference (optional)
+}</pre>
+    </div>
+    
+    <p class="text-muted" style="margin-top: 1rem;">Optional signature verification:</p>
+    <div class="code-block" style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+<pre style="margin: 0; color: var(--text-primary);">Header: X-Webhook-Signature: &lt;HMAC-SHA256 of payload using secret key&gt;</pre>
+    </div>
+    
+    {% elif webhook.provider == 'stripe' %}
+    <p class="text-muted">Configure in Stripe Dashboard → Developers → Webhooks</p>
+    <p><strong>Events to enable:</strong></p>
+    <ul style="margin-left: 1.5rem;">
+        <li><code>payment_intent.succeeded</code></li>
+        <li><code>checkout.session.completed</code></li>
+        <li><code>invoice.paid</code></li>
+    </ul>
+    <p class="text-muted">Include <code>invoice_id</code> or <code>invoice_number</code> in the payment metadata.</p>
+    
+    {% elif webhook.provider == 'paypal' %}
+    <p class="text-muted">Configure in PayPal Developer Dashboard → My Apps → Webhooks</p>
+    <p>Include your invoice number in the <code>invoice</code> field when creating PayPal payments.</p>
+    
+    {% else %}
+    <p class="text-muted">Configure according to {{ providers[webhook.provider].name if webhook.provider in providers else webhook.provider }} documentation.</p>
+    {% endif %}
+</div>
+
+<div class="panel">
+    <h3 class="section-title" style="margin-top: 0;">📜 Recent Logs</h3>
+    
+    {% if logs %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Invoice</th>
+                <th>Response</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.received_at.strftime('%Y-%m-%d %H:%M:%S') if log.received_at else 'N/A' }}</td>
+                <td>
+                    {% if log.status == 'success' %}
+                    <span class="badge badge-paid">Success</span>
+                    {% elif log.status == 'error' %}
+                    <span class="badge badge-overdue">Error</span>
+                    {% else %}
+                    <span class="badge badge-draft">{{ log.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if log.invoice_number %}
+                    <a href="{{ url_for('view_invoice', invoice_id=log.invoice_id) }}">{{ log.invoice_number }}</a>
+                    {% elif log.invoice_id %}
+                    <a href="{{ url_for('view_invoice', invoice_id=log.invoice_id) }}">#{{ log.invoice_id }}</a>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                    {{ log.response or '-' }}
+                </td>
+                <td>
+                    <button class="btn btn-secondary btn-sm" onclick="showPayload({{ loop.index0 }})">View Payload</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Payload modals -->
+    {% for log in logs %}
+    <div id="payload-modal-{{ loop.index0 }}" class="payload-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem; overflow-y: auto;">
+        <div style="max-width: 700px; margin: 2rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
+            <h3 style="margin-top: 0;">Webhook Payload</h3>
+            <p class="text-muted">Received: {{ log.received_at }}</p>
+            
+            <h4>Headers</h4>
+            <pre style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">{{ log.headers or '{}' }}</pre>
+            
+            <h4>Payload</h4>
+            <pre style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">{{ log.payload or '{}' }}</pre>
+            
+            <button type="button" class="btn btn-secondary" onclick="hidePayload({{ loop.index0 }})">Close</button>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted" style="text-align: center; padding: 2rem;">No webhook requests received yet.</p>
+    {% endif %}
+</div>
+
+<script>
+function toggleSecret() {
+    const hidden = document.getElementById('secret-hidden');
+    const visible = document.getElementById('secret-visible');
+    if (hidden.style.display === 'none') {
+        hidden.style.display = 'inline';
+        visible.style.display = 'none';
+    } else {
+        hidden.style.display = 'none';
+        visible.style.display = 'inline';
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Copied to clipboard!');
+    });
+}
+
+function showPayload(index) {
+    document.getElementById('payload-modal-' + index).style.display = 'block';
+}
+
+function hidePayload(index) {
+    document.getElementById('payload-modal-' + index).style.display = 'none';
+}
+
+// Close modal on background click
+document.querySelectorAll('.payload-modal').forEach(function(modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
