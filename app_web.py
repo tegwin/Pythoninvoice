@@ -110,15 +110,21 @@ DEMO_MODE = os.environ.get('DEMO_MODE', '').lower() in ('1', 'true', 'yes')
 # Prefixes blocked in demo mode. Matched against request.path, so a prefix
 # covers every sub-route - new integration routes are blocked automatically
 # rather than needing to be added here.
-DEMO_BLOCKED_PREFIXES = (
+# Browsable in demo, but read-only: the page renders, saving does not. Lets
+# people see what the integrations actually look like.
+DEMO_READONLY_PREFIXES = (
     '/settings/integrations',   # Stripe, GoCardless, SumUp, Wise, FX keys
-    '/settings/api-keys',       # would hand out working API keys
-    '/settings/webhooks',       # outbound calls to arbitrary URLs
+    '/settings/api-keys',       # can view the (empty) list, not mint keys
+    '/settings/webhooks',
     '/settings/incoming-webhooks',
-    '/settings/email',          # SMTP / Graph credentials
-    '/settings/database',       # would expose the DB host and password
-    '/settings/team',           # invites send real email
+    '/settings/email',          # SMTP / Graph config
+    '/settings/team',
     '/settings/portal-users',
+)
+
+# Hidden entirely - viewing alone would expose the host's own credentials.
+DEMO_BLOCKED_PREFIXES = (
+    '/settings/database',       # shows the live DB host, user and password
 )
 
 # Blocked only as a substring of the path, for per-record actions that sit
@@ -131,6 +137,9 @@ DEMO_BLOCKED_FRAGMENTS = (
 DEMO_MESSAGE = ('That is disabled in the demo, because it would send real '
                 'email or contact a payment provider. Everything else works.')
 
+DEMO_READONLY_MESSAGE = ('Read-only in the demo - have a look around, but '
+                         'saving is disabled here.')
+
 # The shared demo account. reset_demo.py recreates it nightly.
 DEMO_USERNAME = os.environ.get('DEMO_USERNAME', 'demo')
 DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', 'demo')
@@ -141,7 +150,7 @@ FOOTER_OWNER = os.environ.get('FOOTER_OWNER', '')
 
 
 def demo_blocks(path):
-    """True if this path must not run in demo mode."""
+    """True if this path must not run at all in demo mode."""
     if path.startswith(DEMO_BLOCKED_PREFIXES):
         return True
     return any(fragment in path for fragment in DEMO_BLOCKED_FRAGMENTS)
@@ -155,14 +164,17 @@ def enforce_demo_mode():
     # machine; they are unauthenticated endpoints, not user navigation.
     if request.path.startswith('/webhook'):
         return ('disabled in demo', 403)
-    if not demo_blocks(request.path):
-        return
-    if request.method == 'GET':
-        flash(DEMO_MESSAGE, 'info')
+    if demo_blocks(request.path):
+        flash(DEMO_MESSAGE, 'warning')
         return redirect(url_for('settings'))
-    # A POST here is a form submission - refuse it outright.
-    flash(DEMO_MESSAGE, 'warning')
-    return redirect(request.referrer or url_for('settings'))
+
+    # Read-only areas: let the page render, refuse anything that writes.
+    if request.path.startswith(DEMO_READONLY_PREFIXES):
+        if request.method == 'GET':
+            g.demo_readonly = True
+            return
+        flash(DEMO_READONLY_MESSAGE, 'warning')
+        return redirect(request.referrer or url_for('settings'))
 
 
 @app.context_processor
@@ -171,6 +183,7 @@ def inject_constants():
         'CURRENCIES': CURRENCIES,
         'get_currency_symbol': get_currency_symbol,
         'DEMO_MODE': DEMO_MODE,
+        'DEMO_READONLY': getattr(g, 'demo_readonly', False),
         'DEMO_USERNAME': DEMO_USERNAME,
         'DEMO_PASSWORD': DEMO_PASSWORD,
         'FOOTER_OWNER': FOOTER_OWNER,

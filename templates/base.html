@@ -734,7 +734,12 @@
     {% endif %}
 
     <main class="main-content">
-        {% if DEMO_MODE %}
+        {% if DEMO_MODE and DEMO_READONLY %}
+            <div class="demo-banner">
+                <strong>Read-only</strong> &mdash; this page is shown so you can
+                see how it works. Saving is disabled in the demo.
+            </div>
+        {% elif DEMO_MODE %}
             <div class="demo-banner">
                 <strong>Demo</strong> &mdash; payment integrations, the API and
                 outgoing email are disabled, and all data resets nightly.
