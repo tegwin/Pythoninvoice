@@ -99,11 +99,81 @@ def serve_upload(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
+# ---------------------------------------------------------------------------
+# Demo mode
+# ---------------------------------------------------------------------------
+# A public demo runs the same code as the real app with DEMO_MODE=true. It
+# blocks anything that would reach a third party, cost money, or leak the
+# host's credentials, and everything is wiped nightly by reset_demo.py.
+DEMO_MODE = os.environ.get('DEMO_MODE', '').lower() in ('1', 'true', 'yes')
+
+# Prefixes blocked in demo mode. Matched against request.path, so a prefix
+# covers every sub-route - new integration routes are blocked automatically
+# rather than needing to be added here.
+DEMO_BLOCKED_PREFIXES = (
+    '/settings/integrations',   # Stripe, GoCardless, SumUp, Wise, FX keys
+    '/settings/api-keys',       # would hand out working API keys
+    '/settings/webhooks',       # outbound calls to arbitrary URLs
+    '/settings/incoming-webhooks',
+    '/settings/email',          # SMTP / Graph credentials
+    '/settings/database',       # would expose the DB host and password
+    '/settings/team',           # invites send real email
+    '/settings/portal-users',
+)
+
+# Blocked only as a substring of the path, for per-record actions that sit
+# under an otherwise-allowed prefix (e.g. /invoices/3/send-email).
+DEMO_BLOCKED_FRAGMENTS = (
+    'send-email', 'stripe', 'gocardless', 'sumup', 'wise',
+    'submit-tax', 'setup-direct-debit',
+)
+
+DEMO_MESSAGE = ('That is disabled in the demo, because it would send real '
+                'email or contact a payment provider. Everything else works.')
+
+# The shared demo account. reset_demo.py recreates it nightly.
+DEMO_USERNAME = os.environ.get('DEMO_USERNAME', 'demo')
+DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', 'demo')
+
+# Shown in the login footer. Empty by default so a copy handed to another MSP
+# carries no one else's company name.
+FOOTER_OWNER = os.environ.get('FOOTER_OWNER', '')
+
+
+def demo_blocks(path):
+    """True if this path must not run in demo mode."""
+    if path.startswith(DEMO_BLOCKED_PREFIXES):
+        return True
+    return any(fragment in path for fragment in DEMO_BLOCKED_FRAGMENTS)
+
+
+@app.before_request
+def enforce_demo_mode():
+    if not DEMO_MODE:
+        return
+    # Let the webhook receivers 404 naturally rather than flashing at a
+    # machine; they are unauthenticated endpoints, not user navigation.
+    if request.path.startswith('/webhook'):
+        return ('disabled in demo', 403)
+    if not demo_blocks(request.path):
+        return
+    if request.method == 'GET':
+        flash(DEMO_MESSAGE, 'info')
+        return redirect(url_for('settings'))
+    # A POST here is a form submission - refuse it outright.
+    flash(DEMO_MESSAGE, 'warning')
+    return redirect(request.referrer or url_for('settings'))
+
+
 @app.context_processor
 def inject_constants():
     return {
         'CURRENCIES': CURRENCIES,
         'get_currency_symbol': get_currency_symbol,
+        'DEMO_MODE': DEMO_MODE,
+        'DEMO_USERNAME': DEMO_USERNAME,
+        'DEMO_PASSWORD': DEMO_PASSWORD,
+        'FOOTER_OWNER': FOOTER_OWNER,
     }
 
 

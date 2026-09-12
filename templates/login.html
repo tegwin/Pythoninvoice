@@ -173,6 +173,21 @@
             border: 1px solid var(--accent-blue);
             color: var(--accent-blue);
         }
+            .demo-login-note {
+            background: rgba(240, 165, 0, 0.12);
+            border: 1px solid var(--accent-yellow, #f0a500);
+            color: var(--accent-yellow, #f0a500);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .demo-login-note code {
+            background: rgba(0,0,0,0.35);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -192,14 +207,24 @@
 
         <div class="login-card">
             <h2 class="login-title">Welcome Back</h2>
+            {% if DEMO_MODE %}
+                <div class="demo-login-note">
+                    <strong>Demo</strong> &mdash; sign in with
+                    <code>{{ DEMO_USERNAME }}</code> / <code>{{ DEMO_PASSWORD }}</code>
+                    (already filled in). Everyone shares this account and all
+                    data resets nightly.
+                </div>
+            {% endif %}
             <form method="POST">
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
-                    <input type="text" id="username" name="username" class="form-control" required autofocus>
+                    <input type="text" id="username" name="username" class="form-control" required autofocus
+                           value="{{ DEMO_USERNAME if DEMO_MODE else '' }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="password">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
+                    <input type="password" id="password" name="password" class="form-control" required
+                           value="{{ DEMO_PASSWORD if DEMO_MODE else '' }}">
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="remember" name="remember" value="1" style="width: auto;">
@@ -210,7 +235,7 @@
         </div>
 
         <div class="login-footer">
-            <p style="font-size: 0.85rem; color: var(--text-muted);">© 2026 Sondela Consulting Limited</p>
+            {% if FOOTER_OWNER %}<p style="font-size: 0.85rem; color: var(--text-muted);">{{ FOOTER_OWNER }}</p>{% endif %}
         </div>
     </div>
 </body>

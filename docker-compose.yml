@@ -34,6 +34,11 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
       # Must be stable, or every restart logs all users out.
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      # Set to true to run this stack as the public demo.
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_USERNAME: ${DEMO_USERNAME:-demo}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo}
+      FOOTER_OWNER: ${FOOTER_OWNER:-}
     volumes:
       # Uploaded logos, avatars and generated invoice files live outside
       # the image so they survive a rebuild.

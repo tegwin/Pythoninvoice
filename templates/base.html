@@ -637,6 +637,16 @@
         .footer-support a:hover {
             text-decoration: underline;
         }
+            .demo-banner {
+            background: rgba(240, 165, 0, 0.12);
+            border: 1px solid var(--accent-yellow, #f0a500);
+            color: var(--accent-yellow, #f0a500);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+        }
+        .demo-banner strong { letter-spacing: 0.03em; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -724,6 +734,13 @@
     {% endif %}
 
     <main class="main-content">
+        {% if DEMO_MODE %}
+            <div class="demo-banner">
+                <strong>Demo</strong> &mdash; payment integrations, the API and
+                outgoing email are disabled, and all data resets nightly.
+                Create invoices, customers and reports freely.
+            </div>
+        {% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
