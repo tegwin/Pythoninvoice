@@ -139,6 +139,34 @@ def apply_schema(cfg):
     print("Schema applied.")
 
 
+def seed_demo_if_empty(cfg):
+    """On a demo service, seed sample data when the database is still empty.
+
+    Only ever runs against an empty users table, so it cannot overwrite
+    anything. Saves needing the cron service to fire before the demo is
+    usable on a freshly created database.
+    """
+    if os.environ.get('DEMO_MODE', '').lower() not in ('1', 'true', 'yes'):
+        return
+    conn = connect(cfg, timeout=30)
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT COUNT(*) FROM users')
+        row = cur.fetchone()
+        count = row['COUNT(*)'] if isinstance(row, dict) else row[0]
+    except Exception:
+        return
+    finally:
+        cur.close()
+        conn.close()
+
+    if count:
+        return
+    print('Demo database is empty - seeding sample data...')
+    import reset_demo
+    reset_demo.main()
+
+
 def main():
     cfg = resolve_config()
     os.makedirs('/app/data', exist_ok=True)
@@ -152,6 +180,7 @@ def main():
           f"{cfg['mysql_port']}/{cfg['mysql_database']}")
     wait_for_db(cfg)
     apply_schema(cfg)
+    seed_demo_if_empty(cfg)
 
 
 if __name__ == '__main__':
