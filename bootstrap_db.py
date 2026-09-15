@@ -167,14 +167,22 @@ def seed_demo_if_empty(cfg):
     reset_demo.main()
 
 
-def main():
-    cfg = resolve_config()
-    os.makedirs('/app/data', exist_ok=True)
+def write_config(cfg):
+    """Persist the resolved settings where database.py expects them.
+
+    database.py reads this file rather than the environment, so anything that
+    imports app_core needs it on disk first.
+    """
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
     os.makedirs('/app/static/uploads', exist_ok=True)
-    # database.py reads settings from this file, not the environment.
     with open(CONFIG_PATH, 'w') as fh:
         json.dump(cfg, fh, indent=2)
     os.chmod(CONFIG_PATH, 0o600)
+
+
+def main():
+    cfg = resolve_config()
+    write_config(cfg)
 
     print(f"Database target: {cfg['mysql_user']}@{cfg['mysql_host']}:"
           f"{cfg['mysql_port']}/{cfg['mysql_database']}")

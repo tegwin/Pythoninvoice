@@ -14,8 +14,12 @@ from datetime import date, timedelta
 
 import mysql.connector
 
-from bootstrap_db import resolve_config, connect
-from app_core import hash_password
+from bootstrap_db import resolve_config, connect, write_config
+
+# app_core is NOT imported here on purpose: importing it runs init_database(),
+# which reads data/db_config.json. Under a Railway custom start command the
+# entrypoint is bypassed, so that file does not exist yet. main() writes it
+# first, then imports.
 
 DEMO_USERNAME = os.environ.get('DEMO_USERNAME', 'demo')
 DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', 'demo')
@@ -92,6 +96,8 @@ def wipe(cur):
 
 def seed(cur):
     today = date.today()
+
+    from app_core import hash_password      # safe now: config is on disk
 
     cur.execute(
         "INSERT INTO users (username, password_hash, email, display_name, role, active) "
@@ -235,6 +241,8 @@ def main():
         sys.exit("Refusing to run: DEMO_MODE is not set. This wipes every table.")
 
     cfg = resolve_config()
+    # Must happen before anything imports app_core.
+    write_config(cfg)
     print(f"Resetting demo data in {cfg['mysql_host']}/{cfg['mysql_database']}")
     conn = connect(cfg, timeout=30)
     cur = conn.cursor(dictionary=True)
