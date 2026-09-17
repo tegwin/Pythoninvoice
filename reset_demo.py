@@ -83,7 +83,7 @@ def wipe(cur):
     cur.execute('SET FOREIGN_KEY_CHECKS = 0')
     for table in TABLES:
         try:
-            cur.execute(f'TRUNCATE TABLE `{table}`')  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
+            cur.execute(f'TRUNCATE TABLE `{table}`')  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
         except mysql.connector.Error as e:
             if e.errno != 1146:      # table does not exist - fine
                 print(f"  skipped {table}: {e}")

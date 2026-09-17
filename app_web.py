@@ -61,7 +61,7 @@ app.permanent_session_lifetime = timedelta(days=7)
 # CSRF protection for browser form posts. Inbound webhooks and the API-key
 # endpoints are machine-to-machine and carry no session cookie, so they are
 # exempt: CSRF is meaningless there and enforcing it would break both.
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # nosemgrep: python.flask.web.flask-wtf-csrf-check-default-false.flask-wtf-csrf-check-default-false -- deliberate: CSRF is applied in a before_request hook so inbound webhooks and API-key endpoints, which carry no session, stay exempt
 csrf = CSRFProtect(app)
 
 CSRF_EXEMPT_PREFIXES = ('/webhook/', '/api/')
@@ -620,7 +620,7 @@ def verify_2fa_login():
 @app.route('/auth/backup-code', methods=['POST'])
 def verify_backup_code():
     """Verify backup code during login."""
-    user_id = request.form.get('user_id')
+    user_id = request.form.get('user_id')  # nosemgrep: python.flask.security.open-redirect.open-redirect -- the sink is redirect(url_for(<fixed endpoint>)); input only fills query parameters
     backup_code = request.form.get('backup_code', '').upper().replace('-', '')
     remember = request.form.get('remember') == '1'
     
@@ -4579,8 +4579,8 @@ def report_vat_pdf():
 @login_required
 def save_vat_checklist():
     """Save VAT verification checklist."""
-    start_date = request.form.get('start_date')
-    end_date = request.form.get('end_date')
+    start_date = request.form.get('start_date')  # nosemgrep: python.flask.security.open-redirect.open-redirect -- the sink is redirect(url_for(<fixed endpoint>)); input only fills query parameters
+    end_date = request.form.get('end_date')  # nosemgrep: python.flask.security.open-redirect.open-redirect -- the sink is redirect(url_for(<fixed endpoint>)); input only fills query parameters
     
     # Get checklist values
     checklist = {
@@ -4667,8 +4667,8 @@ def submit_tax_report():
     
     report_type = request.form.get('report_type')
     recipient = request.form.get('recipient', 'authority')  # 'authority' or 'accountant'
-    start_date = request.form.get('start_date')
-    end_date = request.form.get('end_date')
+    start_date = request.form.get('start_date')  # nosemgrep: python.flask.security.open-redirect.open-redirect -- the sink is redirect(url_for(<fixed endpoint>)); input only fills query parameters
+    end_date = request.form.get('end_date')  # nosemgrep: python.flask.security.open-redirect.open-redirect -- the sink is redirect(url_for(<fixed endpoint>)); input only fills query parameters
     
     settings = SettingsManager(get_effective_user_id()).get_settings()
     user_id = get_effective_user_id()

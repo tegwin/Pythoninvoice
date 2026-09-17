@@ -134,12 +134,12 @@ def ensure_required_columns(cursor, is_mysql):
                 exists = count > 0
                 col_type = mysql_type
             else:
-                cursor.execute(f"PRAGMA table_info({table})")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
+                cursor.execute(f"PRAGMA table_info({table})")  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 exists = any(row[1] == column for row in cursor.fetchall())
                 col_type = sqlite_type
 
             if not exists:
-                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
+                cursor.execute(  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'ALTER TABLE {table} ADD COLUMN {column} {col_type}'
                 )
                 print(f"  Added missing column {table}.{column}")

@@ -210,7 +210,7 @@
         </div>
     </div>
     
-    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
+    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script> {# nosemgrep: html.security.audit.missing-integrity.missing-integrity -- SumUp ship this SDK unversioned and update it in place; pinning a hash would break card payments on their next release #}
     <script>
         const checkoutId = "{{ checkout_id }}";
         const verifyUrl = "{{ url_for('sumup_verify_payment', checkout_id=checkout_id) }}";

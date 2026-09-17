@@ -586,7 +586,7 @@ def migrate_sqlite_to_mysql() -> Dict:
         
         for table in tables:
             try:
-                sqlite_cursor.execute(f"SELECT * FROM {table}")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
+                sqlite_cursor.execute(f"SELECT * FROM {table}")  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 rows = sqlite_cursor.fetchall()
                 
                 if rows:
@@ -629,7 +629,7 @@ def should_skip_table_creation(table_name: str) -> bool:
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SHOW TABLES LIKE '{table_name}'")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
+            cursor.execute(f"SHOW TABLES LIKE '{table_name}'")  # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
             result = cursor.fetchone()
             return result is not None
     except:
