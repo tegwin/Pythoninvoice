@@ -1,4 +1,5 @@
 flask>=2.0.0
+Flask-WTF>=1.2.0  # CSRF protection for browser form posts
 requests>=2.25.0
 reportlab>=3.6.0
 python-dateutil>=2.8.0

@@ -8,6 +8,7 @@
     <div class="flex gap-2">
         {% if expense.status == 'pending' %}
         <form method="POST" action="{{ url_for('approve_expense', expense_id=expense.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-success">✓ Approve</button>
         </form>
         {% endif %}
@@ -152,6 +153,7 @@
     <a href="{{ url_for('expenses') }}" class="btn btn-secondary">← Back to Expenses</a>
     <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" style="display: inline;"
           onsubmit="return confirm('Are you sure you want to delete this expense?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-danger">🗑️ Delete</button>
     </form>
 </div>

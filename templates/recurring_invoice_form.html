@@ -9,6 +9,7 @@
 </div>
 
 <form method="POST" id="recurring-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="panel mb-4">
         <h3 class="section-title" style="margin-top: 0;">👤 Customer & Schedule</h3>
         
@@ -226,6 +227,7 @@
         <a href="{{ url_for('recurring_invoices') }}" class="btn btn-secondary">Cancel</a>
         {% if recurring %}
         <form method="POST" action="{{ url_for('delete_recurring_invoice', recurring_id=recurring.id) }}" style="display: inline; margin-left: auto;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this recurring invoice?');">🗑️ Delete</button>
         </form>
         {% endif %}

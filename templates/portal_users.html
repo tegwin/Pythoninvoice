@@ -58,6 +58,7 @@
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <!-- Impersonate -->
                         <form action="{{ url_for('impersonate_portal_user', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm" title="View portal as this customer">
                                 👁️ View As
                             </button>
@@ -65,6 +66,7 @@
                         
                         <!-- Reset Password -->
                         <form action="{{ url_for('reset_portal_password', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm" title="Reset password">
                                 🔑 Reset
                             </button>
@@ -73,6 +75,7 @@
                         <!-- Toggle Access -->
                         {% if user.is_active %}
                         <form action="{{ url_for('toggle_portal_access', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="revoke">
                             <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-red);" title="Revoke access">
                                 🚫 Revoke
@@ -80,6 +83,7 @@
                         </form>
                         {% else %}
                         <form action="{{ url_for('toggle_portal_access', portal_user_id=user.id) }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="restore">
                             <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-green);" title="Restore access">
                                 ✅ Restore
@@ -90,6 +94,7 @@
                         <!-- Delete -->
                         <form action="{{ url_for('delete_portal_user', portal_user_id=user.id) }}" method="POST" style="display: inline;"
                               onsubmit="return confirm('Delete this portal user? They will no longer be able to access the portal.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--accent-red);" title="Delete user">
                                 🗑️
                             </button>

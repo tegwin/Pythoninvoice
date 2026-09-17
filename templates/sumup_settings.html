@@ -41,6 +41,7 @@
             </p>
             <div class="flex gap-2" style="margin-top: 1rem;">
                 <form method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="enabled" value="1">
                     <input type="hidden" name="disable_other_provider" value="1">
                     <!-- Preserve other settings -->
@@ -84,6 +85,7 @@
 {% endif %}
 
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Enable/Disable -->
     <div class="panel mb-4">
         <h3 class="section-title" style="margin-top: 0;">🔌 Enable SumUp</h3>

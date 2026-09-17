@@ -27,6 +27,7 @@
     <h3 class="section-title" style="margin-top: 0;">Payment Details</h3>
     
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label" for="amount">Amount ({{ currency_symbol }})</label>

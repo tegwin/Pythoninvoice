@@ -178,7 +178,7 @@
 
 <script>
 function voteFeature(featureId) {
-    fetch('{{ url_for("roadmap.vote_feature", feature_id=0) }}'.replace('0', featureId), { method: 'POST' })
+    fetch('{{ url_for("roadmap.vote_feature", feature_id=0) }}'.replace('0', featureId), { method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'} })
         .then(r => r.json())
         .then(data => {
             if (data.success) {

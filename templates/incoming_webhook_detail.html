@@ -12,6 +12,7 @@
     <div class="flex gap-2">
         <a href="{{ url_for('incoming_webhooks') }}" class="btn btn-secondary">← Back to Webhooks</a>
         <form method="POST" action="{{ url_for('toggle_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-secondary">
                 {% if webhook.active %}⏸️ Disable{% else %}▶️ Enable{% endif %}
             </button>
@@ -47,6 +48,7 @@
     </div>
     
     <form method="POST" action="{{ url_for('regenerate_webhook_secret', webhook_id=webhook.id) }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-secondary" onclick="return confirm('Regenerate secret key? You will need to update the key in your provider settings.');">🔄 Regenerate Secret</button>
     </form>
 </div>

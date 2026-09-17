@@ -39,6 +39,7 @@
 {% endif %}
 
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Enable/Disable -->
     <div class="panel mb-4">
         <h3 class="section-title" style="margin-top: 0;">🔌 Enable Wise</h3>

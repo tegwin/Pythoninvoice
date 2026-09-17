@@ -12,6 +12,7 @@
         </div>
         
         <form method="POST" action="{{ url_for('verify_2fa_login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <input type="hidden" name="remember" value="{{ remember }}">
             
@@ -30,6 +31,7 @@
         </div>
         
         <form method="POST" action="{{ url_for('verify_backup_code') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <input type="hidden" name="remember" value="{{ remember }}">
             

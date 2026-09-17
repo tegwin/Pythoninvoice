@@ -10,6 +10,7 @@
 
 <div class="panel" style="max-width: 600px;">
     <form method="POST" action="{{ url_for('create_portal_user') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label class="form-label" for="customer_id">Customer *</label>
             <select id="customer_id" name="customer_id" class="form-control" required>

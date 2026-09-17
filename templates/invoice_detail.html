@@ -110,6 +110,7 @@
             <button type="button" class="btn btn-secondary" onclick="copyStripeLink()">📋 Copy Link</button>
             {% if invoice.customer_email %}
             <form method="POST" action="{{ url_for('send_stripe_payment_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-secondary">
                     📧 Send to Customer
                 </button>
@@ -117,12 +118,14 @@
             {% endif %}
             {% else %}
             <form method="POST" action="{{ url_for('create_stripe_payment_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-primary" style="background: #635bff;">
                     ⚡ Generate Payment Link
                 </button>
             </form>
             {% if invoice.customer_email %}
             <form method="POST" action="{{ url_for('generate_and_send_stripe_link', invoice_id=invoice.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-secondary" style="background: #635bff; color: white;">
                     ⚡📧 Generate & Send
                 </button>
@@ -171,6 +174,7 @@ function copyStripeLink() {
                 </span>
             {% elif gocardless_mandate %}
                 <form method="POST" action="{{ url_for('create_gocardless_payment', invoice_id=invoice.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-primary" style="background: #00b3a4;">
                         🏦 Collect {{ currency_symbol }}{{ "%.2f"|format((invoice.total or 0) - (invoice.amount_paid or 0)) }}
                     </button>
@@ -293,6 +297,7 @@ function copyStripeLink() {
     <div class="flex gap-2 flex-wrap">
         {% if invoice.status == 'draft' %}
         <form method="POST" action="{{ url_for('update_invoice_status', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="sent">
             <button type="submit" class="btn btn-secondary">📤 Mark as Sent</button>
         </form>
@@ -300,18 +305,21 @@ function copyStripeLink() {
         
         {% if invoice.customer_email %}
         <form method="POST" action="{{ url_for('send_invoice_email_route', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-primary" onclick="return confirm('Send this invoice to {{ invoice.customer_email }}?');">📧 Send Email</button>
         </form>
         {% endif %}
         
         {% if invoice.status != 'paid' %}
         <form method="POST" action="{{ url_for('mark_invoice_paid', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="payment_method" value="Other">
             <button type="submit" class="btn btn-success" onclick="return confirm('Mark this invoice as fully paid?');">✅ Mark as Paid</button>
         </form>
         {% endif %}
         
         <form method="POST" action="{{ url_for('delete_invoice', invoice_id=invoice.id) }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this invoice? This cannot be undone.');">🗑️ Delete</button>
         </form>
     </div>

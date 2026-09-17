@@ -9,6 +9,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('email_settings') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Microsoft Graph Configuration -->
     <div class="panel mb-4">
         <h3 class="section-title" style="margin-top: 0;">🔷 Microsoft Graph Email</h3>
@@ -214,6 +215,7 @@ function testGraphEmail() {
     
     fetch('{{ url_for("test_graph_config") }}', {
         method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token() }}'},
         body: formData
     })
     .then(response => response.json())

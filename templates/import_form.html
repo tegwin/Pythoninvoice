@@ -10,6 +10,7 @@
 
 <div class="panel" style="max-width: 600px;">
     <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label class="form-label" for="file">CSV File</label>
             <input type="file" id="file" name="file" class="form-control" accept=".csv" required>

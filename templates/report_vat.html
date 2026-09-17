@@ -158,6 +158,7 @@
     <div class="panel">
         <h3 class="section-title" style="margin-top: 0; color: var(--accent-yellow);">✅ Verification Checklist</h3>
         <form id="checklistForm" method="POST" action="{{ url_for('save_vat_checklist') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="start_date" value="{{ start_date }}">
             <input type="hidden" name="end_date" value="{{ end_date }}">
             
@@ -255,6 +256,7 @@
             <h4>👔 Send to Accountant</h4>
             <p>Email this report to {{ settings.accountant_name or 'your accountant' }} for review.</p>
             <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="report_type" value="vat">
                 <input type="hidden" name="recipient" value="accountant">
                 <input type="hidden" name="start_date" value="{{ start_date }}">
@@ -281,6 +283,7 @@
             {% if settings.tax_authority_email %}
             <p>Email submission to {{ settings.tax_authority }}.</p>
             <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="report_type" value="vat">
                 <input type="hidden" name="recipient" value="authority">
                 <input type="hidden" name="start_date" value="{{ start_date }}">

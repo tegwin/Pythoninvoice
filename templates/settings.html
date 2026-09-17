@@ -16,6 +16,7 @@
 </div>
 
 <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Branding Section -->
     <div class="panel">
         <h3 class="section-title" style="margin-top: 0;">🎨 Branding</h3>

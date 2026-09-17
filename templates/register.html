@@ -172,6 +172,7 @@
         <div class="register-card">
             <h2 class="register-title">Create Account</h2>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
                     <input type="text" id="username" name="username" class="form-control" required autofocus>

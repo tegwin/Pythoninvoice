@@ -62,11 +62,13 @@
                     <div class="flex gap-1">
                         <a href="{{ url_for('view_incoming_webhook', webhook_id=webhook.id) }}" class="btn btn-secondary btn-sm">View</a>
                         <form method="POST" action="{{ url_for('toggle_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm">
                                 {% if webhook.active %}⏸️{% else %}▶️{% endif %}
                             </button>
                         </form>
                         <form method="POST" action="{{ url_for('delete_incoming_webhook', webhook_id=webhook.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this webhook endpoint?');">🗑️</button>
                         </form>
                     </div>
@@ -116,6 +118,7 @@
     <div style="max-width: 500px; margin: 2rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
         <h3 style="margin-top: 0;">Create Webhook Endpoint</h3>
         <form method="POST" action="{{ url_for('create_incoming_webhook') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label class="form-label" for="name">Name *</label>
                 <input type="text" id="name" name="name" class="form-control" required placeholder="e.g., Stripe Payments">

@@ -38,6 +38,7 @@ function copyApiKey() {
 <div class="panel mb-4">
     <h3 class="section-title" style="margin-top: 0;">Create New API Key</h3>
     <form method="POST" action="{{ url_for('create_api_key_route') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label" for="name">Key Name</label>
@@ -149,10 +150,12 @@ function copyApiKey() {
                 <td>
                     {% if key.active %}
                     <form method="POST" action="{{ url_for('revoke_api_key_route', key_id=key.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-secondary btn-sm">Revoke</button>
                     </form>
                     {% endif %}
                     <form method="POST" action="{{ url_for('delete_api_key_route', key_id=key.id) }}" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>
                 </td>

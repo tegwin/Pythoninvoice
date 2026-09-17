@@ -31,6 +31,7 @@
         <p class="text-muted">Enter the 6-digit code from your authenticator app to complete setup.</p>
         
         <form method="POST" action="{{ url_for('verify_2fa_setup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="secret" value="{{ secret }}">
             
             <div class="form-group">

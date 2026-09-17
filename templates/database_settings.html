@@ -19,6 +19,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('database_settings') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="db_type" value="mysql">
     
     <div class="panel mb-4">
@@ -176,7 +177,7 @@ function testMySQLConnection() {
     
     fetch('{{ url_for("test_mysql_connection") }}', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
         body: JSON.stringify(data)
     })
     .then(response => response.json())

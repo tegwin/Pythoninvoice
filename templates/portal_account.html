@@ -48,6 +48,7 @@
         {% endif %}
         
         <form method="POST" action="{{ url_for('portal.portal_change_password') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label class="form-label" for="current_password">Current Password</label>
                 <input type="password" id="current_password" name="current_password" 

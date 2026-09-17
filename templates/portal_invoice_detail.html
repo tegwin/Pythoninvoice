@@ -170,6 +170,7 @@
             <div style="margin-bottom: 1rem;">
                 {% if payment_options.stripe == 'available' %}
                 <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="method" value="stripe">
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
                         💳 Pay with Card (Stripe)
@@ -187,6 +188,7 @@
             <div style="margin-bottom: 1rem;">
                 {% if payment_options.gocardless == 'mandate_active' %}
                 <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="method" value="gocardless">
                     <button type="submit" class="btn btn-secondary" style="width: 100%;">
                         🏦 Pay by Direct Debit
@@ -204,6 +206,7 @@
             <div style="margin-bottom: 1rem;">
                 {% if payment_options.sumup == 'available' %}
                 <form action="{{ url_for('portal.portal_create_payment', invoice_id=invoice.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="method" value="sumup">
                     <button type="submit" class="btn btn-secondary" style="width: 100%;">
                         💳 Pay with SumUp

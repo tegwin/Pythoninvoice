@@ -38,6 +38,7 @@
             {% if req.status == 'pending' %}
             <div class="request-actions">
                 <form method="POST" action="{{ url_for('roadmap.admin_request_action', request_id=req.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <select name="phase_id" class="form-control" style="width: auto;">
                         {% for phase in phases %}
                         <option value="{{ phase.id }}">{{ phase.name }}</option>

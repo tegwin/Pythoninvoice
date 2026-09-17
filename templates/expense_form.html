@@ -8,6 +8,7 @@
 </div>
 
 <form method="POST" enctype="multipart/form-data" class="panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-row">
         <div class="form-group" style="flex: 2;">
             <label class="form-label" for="description">Description *</label>

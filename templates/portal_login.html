@@ -161,6 +161,7 @@
             {% endwith %}
             
             <form method="POST" action="{{ url_for('portal.portal_login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label class="form-label" for="email">Email Address</label>
                     <input type="email" id="email" name="email" class="form-control" 

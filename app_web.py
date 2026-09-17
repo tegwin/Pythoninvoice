@@ -39,6 +39,7 @@ from api_webhooks import (
 )
 
 from pdf_generator import generate_invoice_pdf, generate_invoice_html, check_dependencies
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 
 # Custom JSON provider to handle Decimal and datetime types
@@ -56,6 +57,29 @@ app = Flask(__name__)
 app.json = CustomJSONProvider(app)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 app.permanent_session_lifetime = timedelta(days=7)
+
+# CSRF protection for browser form posts. Inbound webhooks and the API-key
+# endpoints are machine-to-machine and carry no session cookie, so they are
+# exempt: CSRF is meaningless there and enforcing it would break both.
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+csrf = CSRFProtect(app)
+
+CSRF_EXEMPT_PREFIXES = ('/webhook/', '/api/')
+
+
+@app.before_request
+def _csrf_protect_browser_requests():
+    if request.path.startswith(CSRF_EXEMPT_PREFIXES):
+        return
+    csrf.protect()
+
+
+@app.errorhandler(CSRFError)
+def _handle_csrf_error(e):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'CSRF validation failed'}), 400
+    flash('Your session expired. Please try again.', 'warning')
+    return redirect(request.referrer or url_for('index')), 302
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}

@@ -9,6 +9,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('bulk_customers_action') }}" id="bulk-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="panel mb-4">
         <div class="flex gap-4 flex-wrap" style="align-items: center;">
             <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
