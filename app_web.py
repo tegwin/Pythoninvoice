@@ -88,6 +88,24 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
+def safe_float(value, default=0.0):
+    """float() that refuses nan and inf.
+
+    float("nan") succeeds, and a NaN tax rate silently poisons every total it
+    touches: NaN compares false against everything and propagates through the
+    arithmetic, so the invoice renders with blank or nonsense figures.
+    """
+    if value is None or value == '':
+        return default
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number != number or number in (float('inf'), float('-inf')):
+        return default
+    return number
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -707,7 +725,7 @@ def new_customer():
         customer_manager = CustomerManager(get_effective_user_id())
         
         custom_tax = request.form.get('custom_tax_rate')
-        custom_tax = float(custom_tax) if custom_tax else None
+        custom_tax = safe_float(custom_tax, None) if custom_tax else None
         
         customer_id = customer_manager.create(
             name=request.form.get('name'),
@@ -782,7 +800,7 @@ def edit_customer(customer_id):
     
     if request.method == 'POST':
         custom_tax = request.form.get('custom_tax_rate')
-        custom_tax = float(custom_tax) if custom_tax else None
+        custom_tax = safe_float(custom_tax, None) if custom_tax else None
         
         customer_manager.update(customer_id, {
             'name': request.form.get('name'),
@@ -1012,7 +1030,7 @@ def new_invoice():
         customer_id = int(customer_id) if customer_id else None
         
         tax_rate = request.form.get('tax_rate')
-        tax_rate = float(tax_rate) if tax_rate else settings.get('default_tax_rate', 0)
+        tax_rate = safe_float(tax_rate) if tax_rate else settings.get('default_tax_rate', 0)
         
         currency = request.form.get('currency') or settings.get('default_currency', 'GBP')
         
@@ -1181,7 +1199,7 @@ def edit_invoice(invoice_id):
         customer_id = int(customer_id) if customer_id else None
         
         tax_rate = request.form.get('tax_rate')
-        tax_rate = float(tax_rate) if tax_rate else 0
+        tax_rate = safe_float(tax_rate) if tax_rate else 0
         
         invoice_manager.update(invoice_id, {
             'customer_id': customer_id,
@@ -1291,7 +1309,7 @@ def pay_invoice(invoice_id):
     amount_due = invoice['total'] - invoice['amount_paid']
     
     if request.method == 'POST':
-        amount = float(request.form.get('amount', 0))
+        amount = safe_float(request.form.get('amount', 0))
         payment_method = request.form.get('payment_method')
         reference = request.form.get('reference')
         notes = request.form.get('notes')
@@ -1451,7 +1469,7 @@ def bulk_invoices_action():
             elif action == 'update_tax':
                 tax_rate = request.form.get('tax_rate')
                 if tax_rate:
-                    tax_rate = float(tax_rate)
+                    tax_rate = safe_float(tax_rate)
                     invoice = invoice_manager.get(invoice_id)
                     if invoice:
                         invoice_manager.update(invoice_id, tax_rate=tax_rate)
@@ -1539,7 +1557,7 @@ def bulk_customers_action():
             elif action == 'update_tax':
                 tax_rate = request.form.get('tax_rate')
                 if tax_rate:
-                    tax_rate = float(tax_rate)
+                    tax_rate = safe_float(tax_rate)
                     if customer_manager.update(customer_id, custom_tax_rate=tax_rate):
                         count += 1
             
@@ -1639,12 +1657,12 @@ def import_customers():
         
         if 'file' not in request.files:
             flash('No file uploaded.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         file = request.files['file']
         if file.filename == '':
             flash('No file selected.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         if file and file.filename.endswith('.csv'):
             csv_data = file.read().decode('utf-8')
@@ -1680,12 +1698,12 @@ def import_products():
         
         if 'file' not in request.files:
             flash('No file uploaded.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         file = request.files['file']
         if file.filename == '':
             flash('No file selected.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         if file and file.filename.endswith('.csv'):
             csv_data = file.read().decode('utf-8')
@@ -1772,12 +1790,12 @@ def import_invoices():
         
         if 'file' not in request.files:
             flash('No file uploaded.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         file = request.files['file']
         if file.filename == '':
             flash('No file selected.', 'error')
-            return redirect(request.url)
+            return redirect(request.path)  # path only: request.url is rebuilt from the Host header
         
         if file and file.filename.endswith('.csv'):
             csv_data = file.read().decode('utf-8')
@@ -1814,7 +1832,7 @@ def settings():
     
     if request.method == 'POST':
         tax_rate = request.form.get('default_tax_rate')
-        tax_rate = float(tax_rate) if tax_rate else 0
+        tax_rate = safe_float(tax_rate) if tax_rate else 0
         
         updates = {
             'company_name': request.form.get('company_name'),
@@ -2379,7 +2397,7 @@ def save_manual_rate():
         return redirect(url_for('integrations'))
     
     try:
-        rate = float(rate)
+        rate = safe_float(rate)
         set_currency_rate(get_effective_user_id(), from_currency, to_currency, rate)
         flash(f'Exchange rate saved: 1 {from_currency} = {rate} {to_currency}', 'success')
     except ValueError:
@@ -3625,7 +3643,7 @@ def new_bill():
             'bill_date': request.form.get('bill_date'),
             'due_date': request.form.get('due_date') or None,
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'notes': request.form.get('notes')
         }
         
@@ -3724,7 +3742,7 @@ def edit_bill(bill_id):
             'bill_date': request.form.get('bill_date'),
             'due_date': request.form.get('due_date') or None,
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'notes': request.form.get('notes')
         }
         
@@ -3830,7 +3848,7 @@ def pay_bill(bill_id):
         return redirect(url_for('bills'))
     
     if request.method == 'POST':
-        amount = float(request.form.get('amount', 0))
+        amount = safe_float(request.form.get('amount', 0))
         payment_date = request.form.get('payment_date')
         payment_method = request.form.get('payment_method')
         reference = request.form.get('reference')
@@ -3918,9 +3936,9 @@ def new_expense():
         data = {
             'description': request.form.get('description'),
             'expense_date': request.form.get('expense_date'),
-            'amount': float(request.form.get('amount', 0)),
+            'amount': safe_float(request.form.get('amount', 0)),
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'amount_includes_tax': request.form.get('amount_includes_tax') == '1',
             'category': request.form.get('category'),
             'supplier_id': request.form.get('supplier_id') or None,
@@ -4004,9 +4022,9 @@ def edit_expense(expense_id):
         data = {
             'description': request.form.get('description'),
             'expense_date': request.form.get('expense_date'),
-            'amount': float(request.form.get('amount', 0)),
+            'amount': safe_float(request.form.get('amount', 0)),
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'amount_includes_tax': request.form.get('amount_includes_tax') == '1',
             'category': request.form.get('category'),
             'supplier_id': request.form.get('supplier_id') or None,
@@ -4162,7 +4180,7 @@ def credit_note_new():
             'invoice_id': request.form.get('invoice_id') or None,
             'issue_date': request.form.get('issue_date'),
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'reason': request.form.get('reason'),
             'notes': request.form.get('notes'),
             'items': items
@@ -4285,7 +4303,7 @@ def credit_note_edit(credit_note_id):
             'customer_id': request.form.get('customer_id') or None,
             'invoice_id': request.form.get('invoice_id') or None,
             'issue_date': request.form.get('issue_date'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'reason': request.form.get('reason'),
             'notes': request.form.get('notes'),
             'items': items
@@ -4334,7 +4352,7 @@ def credit_note_apply(credit_note_id):
     cn_manager = CreditNoteManager(get_effective_user_id())
     
     invoice_id = request.form.get('invoice_id')
-    amount = float(request.form.get('amount', 0))
+    amount = safe_float(request.form.get('amount', 0))
     
     if not invoice_id or amount <= 0:
         flash('Please select an invoice and enter a valid amount.', 'error')
@@ -6346,7 +6364,7 @@ def edit_recurring_invoice(recurring_id):
             'end_date': request.form.get('end_date') or None,
             'next_invoice_date': request.form.get('next_invoice_date'),
             'currency': request.form.get('currency', 'GBP'),
-            'tax_rate': float(request.form.get('tax_rate', 0)),
+            'tax_rate': safe_float(request.form.get('tax_rate', 0)),
             'notes': request.form.get('notes'),
             'payment_terms': request.form.get('payment_terms'),
             'auto_send': 1 if request.form.get('auto_send') else 0,
