@@ -30,7 +30,7 @@ def get_mysql_config():
 
 def add_column(cursor, table, column, col_type):
     try:
-        cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {col_type}")
+        cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {col_type}")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
         print(f"  ✓ Added {table}.{column}")
         return True
     except mysql.connector.Error as e:

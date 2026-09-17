@@ -226,7 +226,7 @@
         <button type="submit" class="btn btn-primary">💾 {% if recurring %}Update{% else %}Create{% endif %} Recurring Invoice</button>
         <a href="{{ url_for('recurring_invoices') }}" class="btn btn-secondary">Cancel</a>
         {% if recurring %}
-        <form method="POST" action="{{ url_for('delete_recurring_invoice', recurring_id=recurring.id) }}" style="display: inline; margin-left: auto;">
+        <form method="POST" action="{{ url_for('delete_recurring_invoice', recurring_id=recurring.id) }}" style="display: inline; margin-left: auto;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this recurring invoice?');">🗑️ Delete</button>
         </form>

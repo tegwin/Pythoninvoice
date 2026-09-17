@@ -134,12 +134,12 @@ def ensure_required_columns(cursor, is_mysql):
                 exists = count > 0
                 col_type = mysql_type
             else:
-                cursor.execute(f"PRAGMA table_info({table})")
+                cursor.execute(f"PRAGMA table_info({table})")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 exists = any(row[1] == column for row in cursor.fetchall())
                 col_type = sqlite_type
 
             if not exists:
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'ALTER TABLE {table} ADD COLUMN {column} {col_type}'
                 )
                 print(f"  Added missing column {table}.{column}")
@@ -817,7 +817,7 @@ class SettingsManager:
             
             if fields:
                 values.append(self.user_id)
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE company_settings SET {", ".join(fields)} WHERE user_id = ?',
                     values
                 )
@@ -877,7 +877,7 @@ class CustomerManager:
                     values.append(kwargs[field])
             
             placeholders = ', '.join(['?'] * len(values))
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'INSERT INTO customers ({", ".join(fields)}) VALUES ({placeholders})',
                 values
             )
@@ -922,7 +922,7 @@ class CustomerManager:
                 values.append(datetime.now().isoformat())
                 values.extend([customer_id, self.user_id])
 
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE customers SET {", ".join(fields)} WHERE id = ? AND user_id = ?',
                     values
                 )
@@ -955,7 +955,7 @@ class CustomerManager:
             
             for table, column in related_tables:
                 try:
-                    cursor.execute(f'DELETE FROM {table} WHERE {column} = ?', (customer_id,))
+                    cursor.execute(f'DELETE FROM {table} WHERE {column} = ?', (customer_id,))  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 except Exception:
                     pass  # Table might not exist
             
@@ -1015,7 +1015,7 @@ class ProductManager:
                     values.append(kwargs[field])
             
             placeholders = ', '.join(['?'] * len(values))
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'INSERT INTO products ({", ".join(fields)}) VALUES ({placeholders})',
                 values
             )
@@ -1063,7 +1063,7 @@ class ProductManager:
                 values.append(datetime.now().isoformat())
                 values.extend([product_id, self.user_id])
                 
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE products SET {", ".join(fields)} WHERE id = ? AND user_id = ?',
                     values
                 )
@@ -1305,7 +1305,7 @@ class InvoiceManager:
             
             if fields:
                 values.append(item_id)
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE invoice_items SET {", ".join(fields)} WHERE id = ?',
                     values
                 )
@@ -1390,7 +1390,7 @@ class InvoiceManager:
                 values.append(datetime.now().isoformat())
                 values.extend([invoice_id, self.user_id])
                 
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE invoices SET {", ".join(fields)} WHERE id = ? AND user_id = ?',
                     values
                 )
@@ -1428,7 +1428,7 @@ class InvoiceManager:
             
             values.extend([invoice_id, self.user_id])
             
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE invoices SET {", ".join(update_fields)} WHERE id = ? AND user_id = ?',
                 values
             )
@@ -1489,7 +1489,7 @@ class InvoiceManager:
             
             for table, column in safe_to_delete:
                 try:
-                    cursor.execute(f'DELETE FROM {table} WHERE {column} = ?', (invoice_id,))
+                    cursor.execute(f'DELETE FROM {table} WHERE {column} = ?', (invoice_id,))  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 except Exception:
                     pass  # Table might not exist or column might not exist
             

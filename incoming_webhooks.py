@@ -139,7 +139,7 @@ class IncomingWebhookManager:
         
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE incoming_webhooks SET {", ".join(updates)} WHERE id = ? AND user_id = ?',
                 values
             )

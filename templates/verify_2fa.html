@@ -11,7 +11,7 @@
             <p class="text-muted">Enter the code from your authenticator app</p>
         </div>
         
-        <form method="POST" action="{{ url_for('verify_2fa_login') }}">
+        <form method="POST" action="{{ url_for('verify_2fa_login') }}"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <input type="hidden" name="remember" value="{{ remember }}">
@@ -30,7 +30,7 @@
             <span>or</span>
         </div>
         
-        <form method="POST" action="{{ url_for('verify_backup_code') }}">
+        <form method="POST" action="{{ url_for('verify_backup_code') }}"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="user_id" value="{{ user_id }}">
             <input type="hidden" name="remember" value="{{ remember }}">

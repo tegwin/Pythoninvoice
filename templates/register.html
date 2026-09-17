@@ -171,7 +171,7 @@
 
         <div class="register-card">
             <h2 class="register-title">Create Account</h2>
-            <form method="POST">
+            <form method="POST"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>

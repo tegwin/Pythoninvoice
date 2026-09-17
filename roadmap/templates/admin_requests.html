@@ -37,7 +37,7 @@
             
             {% if req.status == 'pending' %}
             <div class="request-actions">
-                <form method="POST" action="{{ url_for('admin_request_action', request_id=req.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <form method="POST" action="{{ url_for('admin_request_action', request_id=req.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <select name="phase_id" class="form-control" style="width: auto;">
                         {% for phase in phases %}

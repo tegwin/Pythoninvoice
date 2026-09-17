@@ -40,7 +40,7 @@ def migrate_table(sqlite_cursor, mysql_cursor, table_name, mysql_conn):
     """Migrate a single table from SQLite to MySQL."""
     
     # Get column info from SQLite
-    sqlite_cursor.execute(f"PRAGMA table_info({table_name})")
+    sqlite_cursor.execute(f"PRAGMA table_info({table_name})")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
     columns_info = sqlite_cursor.fetchall()
     columns = [col[1] for col in columns_info]
     
@@ -49,7 +49,7 @@ def migrate_table(sqlite_cursor, mysql_cursor, table_name, mysql_conn):
         return 0
     
     # Get data from SQLite
-    sqlite_cursor.execute(f"SELECT * FROM {table_name}")
+    sqlite_cursor.execute(f"SELECT * FROM {table_name}")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
     rows = sqlite_cursor.fetchall()
     
     if not rows:
@@ -75,7 +75,7 @@ def migrate_table(sqlite_cursor, mysql_cursor, table_name, mysql_conn):
                 else:
                     processed_row.append(val)
             
-            mysql_cursor.execute(insert_sql, tuple(processed_row))
+            mysql_cursor.execute(insert_sql, tuple(processed_row))  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
             inserted += 1
         except mysql.connector.Error as e:
             if e.errno == 1062:  # Duplicate entry

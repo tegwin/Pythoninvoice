@@ -113,7 +113,7 @@ class CustomerPortalManager:
             values.append(portal_user_id)
             values.append(self.user_id)
             
-            cursor.execute(f'''
+            cursor.execute(f'''  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 UPDATE customer_portal_users 
                 SET {", ".join(fields)}, updated_at = ?
                 WHERE id = ? AND user_id = ?

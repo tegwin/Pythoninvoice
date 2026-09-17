@@ -89,7 +89,7 @@ class GoCardlessManager:
                 
                 if fields:
                     values.append(self.user_id)
-                    cursor.execute(
+                    cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                         f'UPDATE gocardless_settings SET {", ".join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
                         values
                     )

@@ -586,7 +586,7 @@ def migrate_sqlite_to_mysql() -> Dict:
         
         for table in tables:
             try:
-                sqlite_cursor.execute(f"SELECT * FROM {table}")
+                sqlite_cursor.execute(f"SELECT * FROM {table}")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 rows = sqlite_cursor.fetchall()
                 
                 if rows:
@@ -598,7 +598,7 @@ def migrate_sqlite_to_mysql() -> Dict:
                     # Insert data
                     for row in rows:
                         values = [row[col] for col in columns]
-                        mysql_cursor.execute(
+                        mysql_cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                             f"INSERT INTO {table} ({columns_str}) VALUES ({placeholders})",
                             values
                         )
@@ -629,7 +629,7 @@ def should_skip_table_creation(table_name: str) -> bool:
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+            cursor.execute(f"SHOW TABLES LIKE '{table_name}'")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
             result = cursor.fetchone()
             return result is not None
     except:

@@ -97,7 +97,7 @@
         <button type="submit" class="btn btn-primary">💾 {% if product %}Update{% else %}Create{% endif %} Product</button>
         <a href="{{ url_for('products') }}" class="btn btn-secondary">Cancel</a>
         {% if product %}
-        <form method="POST" action="{{ url_for('delete_product', product_id=product.id) }}" style="display: inline; margin-left: auto;">
+        <form method="POST" action="{{ url_for('delete_product', product_id=product.id) }}" style="display: inline; margin-left: auto;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Deactivate this product?');">🗑️ Deactivate</button>
         </form>

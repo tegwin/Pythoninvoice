@@ -149,12 +149,12 @@ function copyApiKey() {
                 </td>
                 <td>
                     {% if key.active %}
-                    <form method="POST" action="{{ url_for('revoke_api_key_route', key_id=key.id) }}" style="display: inline;">
+                    <form method="POST" action="{{ url_for('revoke_api_key_route', key_id=key.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-secondary btn-sm">Revoke</button>
                     </form>
                     {% endif %}
-                    <form method="POST" action="{{ url_for('delete_api_key_route', key_id=key.id) }}" style="display: inline;">
+                    <form method="POST" action="{{ url_for('delete_api_key_route', key_id=key.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                     </form>

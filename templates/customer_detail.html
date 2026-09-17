@@ -92,7 +92,7 @@
 
 <div class="flex gap-4 mt-4">
     <a href="{{ url_for('customers') }}" class="btn btn-secondary">← Back to Customers</a>
-    <form method="POST" action="{{ url_for('delete_customer', customer_id=customer.id) }}" style="display: inline;">
+    <form method="POST" action="{{ url_for('delete_customer', customer_id=customer.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this customer?');">🗑️ Delete Customer</button>
     </form>

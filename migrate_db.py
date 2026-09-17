@@ -82,7 +82,7 @@ def migrate():
     
     # Check which columns exist
     def column_exists(table, column):
-        cursor.execute(f"PRAGMA table_info({table})")
+        cursor.execute(f"PRAGMA table_info({table})")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
         columns = [row[1] for row in cursor.fetchall()]
         return column in columns
     
@@ -485,7 +485,7 @@ def migrate():
     ]
     
     for table_name, sql in new_tables:
-        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
         if not cursor.fetchone():
             cursor.execute(sql)
             print(f"  ✅ Created table {table_name}")

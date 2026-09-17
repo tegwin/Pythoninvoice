@@ -117,7 +117,7 @@ class ChartOfAccounts:
         
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE chart_of_accounts SET {", ".join(updates)} WHERE id = ? AND user_id = ?',
                 values
             )
@@ -289,7 +289,7 @@ class RecurringInvoiceManager:
         
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE recurring_invoices SET {", ".join(updates)} WHERE id = ? AND user_id = ?',
                 values
             )
@@ -357,7 +357,7 @@ class RecurringInvoiceManager:
         
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE recurring_invoice_items SET {", ".join(updates)} WHERE id = ?',
                 values
             )

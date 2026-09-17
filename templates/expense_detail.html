@@ -7,7 +7,7 @@
     <h1 class="page-title">🧾 Expense Details</h1>
     <div class="flex gap-2">
         {% if expense.status == 'pending' %}
-        <form method="POST" action="{{ url_for('approve_expense', expense_id=expense.id) }}" style="display: inline;">
+        <form method="POST" action="{{ url_for('approve_expense', expense_id=expense.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-success">✓ Approve</button>
         </form>
@@ -151,7 +151,7 @@
 
 <div class="flex gap-2">
     <a href="{{ url_for('expenses') }}" class="btn btn-secondary">← Back to Expenses</a>
-    <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" style="display: inline;"
+    <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" style="display: inline;" {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
           onsubmit="return confirm('Are you sure you want to delete this expense?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-danger">🗑️ Delete</button>

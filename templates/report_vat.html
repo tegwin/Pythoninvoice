@@ -255,7 +255,7 @@
         <div class="submission-card">
             <h4>👔 Send to Accountant</h4>
             <p>Email this report to {{ settings.accountant_name or 'your accountant' }} for review.</p>
-            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="report_type" value="vat">
                 <input type="hidden" name="recipient" value="accountant">
@@ -282,7 +282,7 @@
             <h4>🏛️ Submit to {{ settings.tax_authority }}</h4>
             {% if settings.tax_authority_email %}
             <p>Email submission to {{ settings.tax_authority }}.</p>
-            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;">
+            <form method="POST" action="{{ url_for('submit_tax_report') }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="report_type" value="vat">
                 <input type="hidden" name="recipient" value="authority">

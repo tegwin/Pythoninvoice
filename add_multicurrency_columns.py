@@ -36,7 +36,7 @@ def add_columns():
         # Add columns to existing tables
         for table, column, col_type in alterations:
             try:
-                cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {col_type}")
+                cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {col_type}")  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 print(f"✅ Added {table}.{column}")
             except Exception as e:
                 if 'Duplicate column' in str(e) or '1060' in str(e):

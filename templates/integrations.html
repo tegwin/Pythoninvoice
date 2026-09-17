@@ -136,7 +136,7 @@
                     Select which currencies you want to use for invoicing.
                 </p>
                 
-                <form method="POST" action="{{ url_for('save_enabled_currencies') }}">
+                <form method="POST" action="{{ url_for('save_enabled_currencies') }}"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;">
                         {% for code, info in CURRENCIES.items() %}
@@ -196,7 +196,7 @@
                 
                 <div class="flex gap-2">
                     {% if settings.currency_api_key %}
-                    <form method="POST" action="{{ url_for('update_currency_rates') }}" style="display: inline;">
+                    <form method="POST" action="{{ url_for('update_currency_rates') }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-success">🔄 Update Rates</button>
                     </form>

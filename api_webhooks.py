@@ -302,7 +302,7 @@ def update_webhook(webhook_id: str, user_id: int, updates: dict) -> bool:
         
         if fields:
             values.extend([webhook_id, user_id])
-            cursor.execute(
+            cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                 f'UPDATE webhooks SET {", ".join(fields)} WHERE webhook_id = ? AND user_id = ?',
                 values
             )
@@ -346,7 +346,7 @@ def update_webhook(webhook_id: str, user_id: int, name: str = None, url: str = N
         
         params.extend([webhook_id, user_id])
         
-        cursor.execute(f'''
+        cursor.execute(f'''  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
             UPDATE webhooks 
             SET {", ".join(updates)}
             WHERE webhook_id = ? AND user_id = ?

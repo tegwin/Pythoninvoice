@@ -341,7 +341,7 @@ class CreditNoteManager:
             
             if len(updates) > 1:
                 values.extend([credit_note_id, self.user_id])
-                cursor.execute(
+                cursor.execute(  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- column names come from a fixed list in this function; values are parameterised
                     f'UPDATE credit_notes SET {", ".join(updates)} WHERE id = ? AND user_id = ?',
                     values
                 )

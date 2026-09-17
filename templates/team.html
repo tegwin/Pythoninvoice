@@ -165,17 +165,17 @@
                         <button class="btn btn-secondary btn-sm" onclick="showEditModal({{ member.id }}, '{{ member.role }}')">Edit</button>
                         <button class="btn btn-secondary btn-sm" onclick="showPasswordModal({{ member.id }})">Reset PW</button>
                         {% if member.active %}
-                        <form method="POST" action="{{ url_for('deactivate_team_member', member_id=member.id) }}" style="display: inline;">
+                        <form method="POST" action="{{ url_for('deactivate_team_member', member_id=member.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Deactivate this team member?');">Deactivate</button>
                         </form>
                         {% else %}
-                        <form method="POST" action="{{ url_for('reactivate_team_member', member_id=member.id) }}" style="display: inline;">
+                        <form method="POST" action="{{ url_for('reactivate_team_member', member_id=member.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-secondary btn-sm">Reactivate</button>
                         </form>
                         {% endif %}
-                        <form method="POST" action="{{ url_for('delete_team_member', member_id=member.id) }}" style="display: inline;">
+                        <form method="POST" action="{{ url_for('delete_team_member', member_id=member.id) }}" style="display: inline;"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete this team member? This cannot be undone.');">Delete</button>
                         </form>
@@ -202,7 +202,7 @@
 <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem;">
     <div style="max-width: 400px; margin: 4rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
         <h3 style="margin-top: 0;">Change Role</h3>
-        <form method="POST" action="{{ url_for('update_team_member_role') }}" id="edit-form">
+        <form method="POST" action="{{ url_for('update_team_member_role') }}" id="edit-form"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="member_id" id="edit-member-id">
             <div class="form-group">
@@ -227,7 +227,7 @@
 <div id="password-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem;">
     <div style="max-width: 400px; margin: 4rem auto; background: var(--bg-medium); padding: 2rem; border-radius: 12px;">
         <h3 style="margin-top: 0;">Reset Password</h3>
-        <form method="POST" action="{{ url_for('reset_team_member_password') }}" id="password-form">
+        <form method="POST" action="{{ url_for('reset_team_member_password') }}" id="password-form"> {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token -- Flask app: the token is rendered as {{ csrf_token() }}, which this Django rule does not match #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="member_id" id="password-member-id">
             <div class="form-group">
