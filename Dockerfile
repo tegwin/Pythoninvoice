@@ -22,6 +22,13 @@ COPY . .
 RUN chmod +x /app/docker-entrypoint.sh \
  && mkdir -p /app/data /app/static/uploads
 
+# Run as a normal user rather than root. The two writable paths are chowned
+# here; if the platform mounts a volume over /app/data it may arrive owned by
+# root, in which case chown it on the volume once and the app starts again.
+RUN useradd --create-home --uid 10001 appuser \
+ && chown -R appuser:appuser /app/data /app/static/uploads
+USER appuser
+
 EXPOSE 5000
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
