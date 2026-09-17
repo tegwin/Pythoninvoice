@@ -10,6 +10,7 @@
 
 <div class="panel" style="max-width: 600px; margin: 0 auto;">
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label class="form-label" for="title">Feature Title *</label>
             <input type="text" id="title" name="title" class="form-control" required

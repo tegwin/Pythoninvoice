@@ -210,7 +210,7 @@
 {% block scripts %}
 <script>
 function voteFeature(featureId) {
-    fetch('/vote/' + featureId, { method: 'POST' })
+    fetch('/vote/' + featureId, { method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'} })
         .then(r => r.json())
         .then(data => {
             if (data.success) {

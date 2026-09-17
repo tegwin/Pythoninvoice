@@ -14,9 +14,14 @@ from datetime import datetime
 from functools import wraps
 from contextlib import contextmanager
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('ROADMAP_SECRET_KEY', secrets.token_hex(32))
+
+# Every POST here is a browser form (the only API route is read-only), so
+# blanket CSRF protection needs no exemptions.
+csrf = CSRFProtect(app)
 
 # Configuration
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
