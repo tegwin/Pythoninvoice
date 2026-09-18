@@ -4,6 +4,7 @@ A Flask-based web interface for managing invoices, customers, and products.
 """
 
 import os
+from urllib.parse import urlparse
 import sys
 import json
 import secrets
@@ -79,13 +80,32 @@ def _handle_csrf_error(e):
     if request.path.startswith('/api/'):
         return jsonify({'error': 'CSRF validation failed'}), 400
     flash('Your session expired. Please try again.', 'warning')
-    return redirect(request.referrer or url_for('index')), 302
+    return redirect(safe_referrer(url_for('index'))), 302
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def safe_referrer(fallback):
+    """Return the Referer only when it points at this site.
+
+    The Referer header comes from whoever built the page the user came from, so
+    following it as given turns any handler that bounces "back" into a
+    redirector to anywhere.
+    """
+    referrer = request.referrer
+    if not referrer:
+        return fallback
+    target = urlparse(referrer)
+    if target.netloc and target.netloc != urlparse(request.host_url).netloc:
+        return fallback
+    path = target.path or '/'
+    if target.query:
+        path = f'{path}?{target.query}'
+    return path if path.startswith('/') and not path.startswith('//') else fallback
 
 
 def safe_float(value, default=0.0):
@@ -216,7 +236,7 @@ def enforce_demo_mode():
             g.demo_readonly = True
             return
         flash(DEMO_READONLY_MESSAGE, 'warning')
-        return redirect(request.referrer or url_for('settings'))
+        return redirect(safe_referrer(url_for('settings')))
 
 
 @app.context_processor
